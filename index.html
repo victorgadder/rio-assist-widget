@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RIO Assist Widget</title>
+    <style>
+      body {
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #0a1f33, #11486c);
+        color: #fff;
+        padding: 32px;
+      }
+
+      main {
+        max-width: 640px;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>RIO Assist Widget</h1>
+      <p>
+        Playground de teste para o webcomponent. Clique no
+        botão flutuante no canto inferior direito para testar.
+      </p>
+    </main>
+
+    <rio-assist-widget
+      data-title="RIO Assist"
+      data-button-label="RIO Assist"
+      data-placeholder="Pergunte alguma coisa"
+      data-suggestions="Veículos com problemas|Valor das peças|Planos de manutenção"
+      data-accent-color="#c02267"
+    ></rio-assist-widget>
+
+    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/playground.ts"></script>
+  </body>
+</html>

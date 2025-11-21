@@ -1,0 +1,21 @@
+import './main';
+
+const boot = () => {
+  window.RioAssist?.init({
+    title: 'RIO Assist',
+    buttonLabel: 'RIO Assist',
+    accentColor: '#c02267',
+    suggestions: [
+      'Veículos com problemas',
+      'Valor das peças',
+      'Planos de manutenção',
+    ],
+  });
+};
+
+if (window.RioAssist) {
+  boot();
+} else {
+  window.addEventListener('rio-assist-ready', boot, { once: true });
+}
+

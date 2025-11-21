@@ -1,0 +1,69 @@
+import './components/rio-assist';
+
+export type RioAssistOptions = {
+  target?: HTMLElement;
+  title?: string;
+  buttonLabel?: string;
+  placeholder?: string;
+  suggestions?: string[];
+  accentColor?: string;
+  apiBaseUrl?: string;
+};
+
+const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
+  title: 'RIO Assist',
+  buttonLabel: 'RIO Assist',
+  placeholder: 'Pergunte alguma coisa',
+  suggestions: [
+    'Veículos com problemas',
+    'Valor das peças',
+    'Planos de manutenção',
+  ],
+  accentColor: '#008B9A',
+  apiBaseUrl: '',
+};
+
+const widgetTagName = 'rio-assist-widget';
+
+function ensureElement(options: RioAssistOptions = {}) {
+  const {
+    target = document.body,
+    ...rest
+  } = options;
+
+  let widget = document.querySelector(widgetTagName) as HTMLElement | null;
+
+  if (!widget) {
+    widget = document.createElement(widgetTagName);
+    target.appendChild(widget);
+  }
+
+  const mergedOptions = { ...DEFAULT_OPTIONS, ...rest };
+
+  Object.entries(mergedOptions).forEach(([key, value]) => {
+    if (value === undefined) {
+      return;
+    }
+
+    widget?.setAttribute(
+      `data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`,
+      Array.isArray(value) ? value.join('|') : String(value),
+    );
+  });
+}
+
+declare global {
+  interface Window {
+    RioAssist?: {
+      init: (options?: RioAssistOptions) => void;
+    };
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.RioAssist = window.RioAssist ?? {
+    init: ensureElement,
+  };
+  window.dispatchEvent(new Event('rio-assist-ready'));
+}
+
