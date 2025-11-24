@@ -1,4 +1,4 @@
-import { LitElement } from 'lit';
+import { LitElement, type PropertyValues } from 'lit';
 import { widgetStyles } from './rio-assist.styles';
 import { renderRioAssist } from './rio-assist.template';
 import { invokeAgentRuntime } from '../services/bedrockAgentRuntime';
@@ -38,6 +38,8 @@ export class RioAssistWidget extends LitElement {
     conversationSearch: { type: String, state: true },
     conversationMenuId: { state: true },
     conversationMenuPlacement: { state: true },
+    isFullscreen: { type: Boolean, state: true },
+    conversationScrollbar: { state: true },
   };
 
   open = false;
@@ -72,6 +74,16 @@ export class RioAssistWidget extends LitElement {
 
   conversationMenuPlacement: 'above' | 'below' = 'below';
 
+  isFullscreen = false;
+
+  conversationScrollbar = {
+    height: 0,
+    top: 0,
+    visible: false,
+  };
+
+  private conversationScrollbarRaf: number | null = null;
+
   conversations: ConversationItem[] = Array.from({ length: 20 }).map(
     (_, index) => ({
       id: `${index + 1}`,
@@ -103,8 +115,29 @@ export class RioAssistWidget extends LitElement {
       .filter(Boolean);
   }
 
-  protected updated(): void {
+  protected updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
     this.style.setProperty('--accent-color', this.accentColor);
+
+    if (
+      changedProperties.has('isFullscreen') ||
+      changedProperties.has('showConversations') ||
+      changedProperties.has('conversations')
+    ) {
+      this.enqueueConversationScrollbarMeasure();
+    }
+  }
+
+  protected firstUpdated(): void {
+    this.enqueueConversationScrollbarMeasure();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.conversationScrollbarRaf !== null) {
+      cancelAnimationFrame(this.conversationScrollbarRaf);
+      this.conversationScrollbarRaf = null;
+    }
   }
 
   get filteredConversations() {
@@ -119,6 +152,11 @@ export class RioAssistWidget extends LitElement {
   }
 
   togglePanel() {
+    if (this.isFullscreen) {
+      this.exitFullscreen(false);
+      return;
+    }
+
     this.open = !this.open;
     this.dispatchEvent(
       new CustomEvent(this.open ? 'rioassist:open' : 'rioassist:close', {
@@ -129,6 +167,7 @@ export class RioAssistWidget extends LitElement {
   }
 
   closePanel() {
+    this.isFullscreen = false;
     if (this.open) {
       this.togglePanel();
     }
@@ -203,6 +242,11 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleCloseAction() {
+    if (this.isFullscreen) {
+      this.exitFullscreen(true);
+      return;
+    }
+
     if (this.showConversations) {
       this.closeConversationsPanel();
     } else {
@@ -210,8 +254,84 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
+  enterFullscreen() {
+    if (this.isFullscreen) {
+      return;
+    }
+
+    this.isFullscreen = true;
+    this.open = false;
+    this.showConversations = false;
+  }
+
+  exitFullscreen(restorePanel: boolean) {
+    if (!this.isFullscreen) {
+      return;
+    }
+
+    this.isFullscreen = false;
+    this.conversationMenuId = null;
+    if (restorePanel) {
+      this.open = true;
+    }
+  }
+
   handleCreateConversation() {
     console.info('[Mock] Criar nova conversa');
+  }
+
+  handleConversationListScroll(event: Event) {
+    const target = event.currentTarget as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+    this.updateConversationScrollbar(target);
+  }
+
+  private enqueueConversationScrollbarMeasure() {
+    if (this.conversationScrollbarRaf !== null) {
+      return;
+    }
+
+    this.conversationScrollbarRaf = requestAnimationFrame(() => {
+      this.conversationScrollbarRaf = null;
+      this.updateConversationScrollbar();
+    });
+  }
+
+  private updateConversationScrollbar(target?: HTMLElement | null) {
+    const element =
+      target ??
+      (this.renderRoot.querySelector(
+        '.conversation-list--sidebar',
+      ) as HTMLElement | null);
+
+    if (!element) {
+      if (this.conversationScrollbar.visible) {
+        this.conversationScrollbar = { height: 0, top: 0, visible: false };
+      }
+      return;
+    }
+
+    const { scrollHeight, clientHeight, scrollTop } = element;
+    if (scrollHeight <= clientHeight + 1) {
+      if (this.conversationScrollbar.visible) {
+        this.conversationScrollbar = { height: 0, top: 0, visible: false };
+      }
+      return;
+    }
+
+    const ratio = clientHeight / scrollHeight;
+    const height = Math.max(ratio * 100, 8);
+    const maxTop = 100 - height;
+    const top =
+      scrollTop / (scrollHeight - clientHeight) * (maxTop > 0 ? maxTop : 0);
+
+    this.conversationScrollbar = {
+      height,
+      top,
+      visible: true,
+    };
   }
 
   async onSuggestionClick(suggestion: string) {

@@ -1,39 +1,65 @@
 import { html } from 'lit';
 import type { RioAssistWidget } from './rio-assist';
 import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
 
 const threePointsIconUrl = new URL('../assets/icons/threePoints.png', import.meta.url).href;
 const editIconUrl = new URL('../assets/icons/edit.png', import.meta.url).href;
 const trashIconUrl = new URL('../assets/icons/trash.png', import.meta.url).href;
 const searchIconUrl = new URL('../assets/icons/searchIcon.png', import.meta.url).href;
 
-export const renderConversationsPanel = (component: RioAssistWidget) => html`
-  <div
-    class=${classMap({
-      'conversations-panel': true,
-      'conversations-panel--open': component.showConversations,
-    })}
-    aria-hidden=${!component.showConversations}
-    @pointerdown=${(event: PointerEvent) =>
-      component.handleConversationsPanelPointer(event)}
-  >
-    <div class="conversations-panel__surface">
-      <div class="conversation-search">
-        <img class="search-icon" src=${searchIconUrl} alt="" aria-hidden="true" />
-        <input
-          type="text"
-          placeholder="Buscar nas conversas"
-          .value=${component.conversationSearch}
-          @input=${(event: InputEvent) => component.handleConversationSearch(event)}
-        />
+type ConversationsPanelVariant = 'drawer' | 'sidebar';
+
+export const renderConversationsPanel = (
+  component: RioAssistWidget,
+  options: { variant?: ConversationsPanelVariant } = {},
+) => {
+  const variant = options.variant ?? 'drawer';
+  const isSidebar = variant === 'sidebar';
+  const isOpen = isSidebar || component.showConversations;
+
+  return html`
+    <div
+      class=${classMap({
+        'conversations-panel': true,
+        'conversations-panel--open': isOpen,
+        'conversations-panel--sidebar': isSidebar,
+      })}
+      aria-hidden=${!isOpen}
+      @pointerdown=${(event: PointerEvent) =>
+        component.handleConversationsPanelPointer(event)}
+    >
+      <div
+        class=${classMap({
+          'conversations-panel__surface': true,
+          'conversations-panel__surface--sidebar': isSidebar,
+        })}
+      >
+        ${renderConversationSurface(component, variant)}
       </div>
+    </div>
+  `;
+};
 
-      <div class="conversation-list">
-        ${component.filteredConversations.map(
-          (conversation) => {
-            const menuOpen = component.conversationMenuId === conversation.id;
+const renderConversationSurface = (
+  component: RioAssistWidget,
+  variant: ConversationsPanelVariant,
+) => {
+  const isSidebar = variant === 'sidebar';
 
-            return html`
+  const list = html`
+    <div
+      class=${classMap({
+        'conversation-list': true,
+        'conversation-list--sidebar': isSidebar,
+      })}
+      @scroll=${isSidebar ? (event: Event) => component.handleConversationListScroll(event) : null}
+    >
+      ${component.filteredConversations.map(
+        (conversation) => {
+          const menuOpen = component.conversationMenuId === conversation.id;
+
+          return html`
             <div class="conversation-item">
               <div class="conversation-item__text">
                 ${conversation.title}
@@ -77,9 +103,48 @@ export const renderConversationsPanel = (component: RioAssistWidget) => html`
                 : null}
             </div>
           `;
-          },
-        )}
-      </div>
+        },
+      )}
     </div>
-  </div>
-`;
+  `;
+
+  return html`
+    <div class="conversation-search">
+      <img class="search-icon" src=${searchIconUrl} alt="" aria-hidden="true" />
+      <input
+        type="text"
+        placeholder="Buscar nas conversas"
+        .value=${component.conversationSearch}
+        @input=${(event: InputEvent) => component.handleConversationSearch(event)}
+      />
+    </div>
+
+    <div
+      class=${classMap({
+        'conversation-list-wrapper': true,
+        'conversation-list-wrapper--sidebar': isSidebar,
+      })}
+    >
+      ${list}
+      ${isSidebar
+        ? html`
+            <div
+              class=${classMap({
+                'conversation-scrollbar': true,
+                'conversation-scrollbar--visible':
+                  component.conversationScrollbar.visible,
+              })}
+            >
+              <span
+                class="conversation-scrollbar__thumb"
+                style=${styleMap({
+                  height: `${component.conversationScrollbar.height}%`,
+                  top: `${component.conversationScrollbar.top}%`,
+                })}
+              ></span>
+            </div>
+          `
+        : null}
+    </div>
+  `;
+};
