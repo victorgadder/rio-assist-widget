@@ -1,6 +1,6 @@
 {
   "name": "rio-assist-widget",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Web Component do painel lateral RIO Assist, pronto para ser embutido em qualquer projeto.",
   "type": "module",
   "scripts": {

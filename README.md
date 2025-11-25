@@ -6,7 +6,7 @@ Widget lateral do RIO Assist embalado como Web Component. Ao receber o token de 
 {
   "action": "sendMessage",
   "message": "<mensagem do usuario>",
-  "agentModel": "claude-3-sonnet"
+  "agentModel": "eu.amazon.nova-pro-v1:0"
 }
 ```
 

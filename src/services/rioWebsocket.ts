@@ -1,5 +1,5 @@
 const WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
-const DEFAULT_AGENT_MODEL = 'claude-3-sonnet';
+const DEFAULT_AGENT_MODEL = 'eu.amazon.nova-pro-v1:0';
 
 export type RioIncomingMessage = {
   text: string;
