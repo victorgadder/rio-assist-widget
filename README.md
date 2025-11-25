@@ -1,57 +1,57 @@
 # RIO Assist Widget
 
-Widget lateral do RIO Assist embalado como Web Component. Pode ser usado em qualquer projeto apenas carregando o script compilado ou instalando o pacote via npm.
+Widget lateral do RIO Assist embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
+
+```json
+{
+  "action": "sendMessage",
+  "message": "<mensagem do usuario>",
+  "agentModel": "claude-3-sonnet"
+}
+```
 
 ## Scripts
+- `npm run dev` - inicia Vite para desenvolvimento.
+- `npm run build` - gera `dist/rio-assist.js` pronto para CDN ou npm.
+- `npm run preview` - serve o bundle de producao localmente.
 
-- `npm run dev` – inicia Vite para desenvolvimento.
-- `npm run build` – gera `dist/rio-assist.js` pronto para publicar em um CDN ou no registro npm.
-- `npm run preview` – serve o bundle de produção localmente.
-
-## Uso rápido no navegador
-
+## Uso rapido no navegador
 ```html
 <script src="https://cdn.exemplo.com/rio-assist.js"></script>
 <script>
   window.RioAssist.init({
-    apiBaseUrl: 'https://assist.seudominio.com',
+    rioToken: '<TOKEN_RIO>',
     title: 'RIO Assist',
     buttonLabel: 'RIO Assist',
     suggestions: [
-      'Veículos com problemas',
-      'Valor das peças',
-      'Planos de manutenção'
+      'Veiculos com problemas',
+      'Valor das pecas',
+      'Planos de manutencao'
     ],
   });
 </script>
 ```
 
-O método `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. Todos os parâmetros são opcionais.
+O metodo `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. Todos os parametros sao opcionais, mas `rioToken` precisa ser preenchido para conectar ao websocket.
 
-## Integração com apps (React/Angular/Vanilla)
-
+## Integracao com apps (React/Angular/Vanilla)
 1. Instale:
+   ```bash
+   npm install rio-assist-widget
+   ```
+2. Importe o bundle no bootstrap (ex.: `main.tsx`):
+   ```ts
+   import 'rio-assist-widget/dist/rio-assist.js';
 
-```bash
-npm install rio-assist-widget
-```
-
-2. Importe o bundle em qualquer ponto de bootstrap (ex.: `main.tsx`):
-
-```ts
-import 'rio-assist-widget/dist/rio-assist.js';
-
-window.RioAssist?.init({
-  apiBaseUrl: 'https://assist.seudominio.com',
-  accentColor: '#008B9A',
-});
-```
-
-3. Se preferir instanciar manualmente, basta colocar `<rio-assist-widget></rio-assist-widget>` no HTML e definir os atributos `data-*` (`data-title`, `data-button-label` etc.).
+   window.RioAssist?.init({
+     rioToken: '<TOKEN_RIO>',
+     accentColor: '#008B9A',
+   });
+   ```
+3. Se preferir instanciar manualmente, coloque `<rio-assist-widget></rio-assist-widget>` no HTML e defina os atributos `data-*` (`data-title`, `data-button-label`, `data-rio-token` etc.).
 
 ## Eventos disponibilizados
+- `rioassist:open` / `rioassist:close` - disparados ao abrir/fechar o painel.
+- `rioassist:send` - disparado quando o usuario envia uma mensagem. O `detail` contem `{ message, apiBaseUrl, token }`.
 
-- `rioassist:open` / `rioassist:close` – disparados ao abrir/fechar o painel.
-- `rioassist:send` – disparado quando o usuário envia uma mensagem. O `detail` contém `{ message, apiBaseUrl }`.
-
-Esses eventos permitem que o app hospedeiro envie a mensagem para o serviço de IA centralizado.
+Escute esses eventos caso queira registrar logs ou interceptar mensagens antes/depois de irem para o websocket.

@@ -1,4 +1,4 @@
-import './components/rio-assist';
+﻿import './components/rio-assist';
 
 export type RioAssistOptions = {
   target?: HTMLElement;
@@ -8,6 +8,7 @@ export type RioAssistOptions = {
   suggestions?: string[];
   accentColor?: string;
   apiBaseUrl?: string;
+  rioToken?: string;
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
@@ -21,6 +22,7 @@ const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   ],
   accentColor: '#008B9A',
   apiBaseUrl: '',
+  rioToken: '',
 };
 
 const widgetTagName = 'rio-assist-widget';
@@ -66,4 +68,5 @@ if (typeof window !== 'undefined') {
   };
   window.dispatchEvent(new Event('rio-assist-ready'));
 }
+
 

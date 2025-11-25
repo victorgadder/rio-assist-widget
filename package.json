@@ -17,7 +17,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-bedrock-agentcore": "^3.933.0",
     "lit": "^3.1.2"
   },
   "devDependencies": {

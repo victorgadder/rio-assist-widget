@@ -1,7 +1,10 @@
-import { LitElement, type PropertyValues } from 'lit';
+﻿import { LitElement, type PropertyValues } from 'lit';
 import { widgetStyles } from './rio-assist.styles';
 import { renderRioAssist } from './rio-assist.template';
-import { invokeAgentRuntime } from '../../services/bedrockAgentRuntime';
+import {
+  RioWebsocketClient,
+  type RioIncomingMessage,
+} from '../../services/rioWebsocket';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -29,9 +32,9 @@ export class RioAssistWidget extends LitElement {
     placeholder: { type: String, attribute: 'data-placeholder' },
     accentColor: { type: String, attribute: 'data-accent-color' },
     apiBaseUrl: { type: String, attribute: 'data-api-base-url' },
+    rioToken: { type: String, attribute: 'data-rio-token' },
     suggestionsSource: { type: String, attribute: 'data-suggestions' },
     messages: { state: true },
-    sessionId: { state: true },
     isLoading: { type: Boolean, state: true },
     errorMessage: { type: String, state: true },
     showConversations: { type: Boolean, state: true },
@@ -56,11 +59,11 @@ export class RioAssistWidget extends LitElement {
 
   apiBaseUrl = '';
 
+  rioToken = '';
+
   suggestionsSource = '';
 
   messages: ChatMessage[] = [];
-
-  sessionId?: string;
 
   isLoading = false;
 
@@ -84,21 +87,27 @@ export class RioAssistWidget extends LitElement {
 
   private conversationScrollbarRaf: number | null = null;
 
+  private rioClient: RioWebsocketClient | null = null;
+
+  private rioUnsubscribe: (() => void) | null = null;
+
+  private loadingTimer: number | null = null;
+
   conversations: ConversationItem[] = Array.from({ length: 20 }).map(
     (_, index) => ({
       id: `${index + 1}`,
       title: [
-        'Caminhões com problema na frota de veículos.',
-        'Próximas manutenções periódicas preventivas.',
-        'Quais revisões meu plano inclui?',
-        'Como automatizar preenchimento de odômetro.',
-        'Valor das peças da próxima revisão.',
-        'O que é revisão de assentamento?',
-        'Alertas críticos ativos.',
-        'Veículo superaquecendo, causas e recomendações.',
+        'CaminhÃµes com problema na frota de veÃ­culos.',
+        'PrÃ³ximas manutenÃ§Ãµes periÃ³dicas preventivas.',
+        'Quais revisÃµes meu plano inclui?',
+        'Como automatizar preenchimento de odÃ´metro.',
+        'Valor das peÃ§as da prÃ³xima revisÃ£o.',
+        'O que Ã© revisÃ£o de assentamento?',
+        'Alertas crÃ­ticos ativos.',
+        'VeÃ­culo superaquecendo, causas e recomendaÃ§Ãµes.',
         'Calibragem recomendada nos pneus do e-Delivery.',
-        'Quantos mil km trocar o óleo do motor.',
-        'Qual a vida útil da bateria Moura M100HE.',
+        'Quantos mil km trocar o Ã³leo do motor.',
+        'Qual a vida Ãºtil da bateria Moura M100HE.',
       ][index % 11],
       updatedAt: new Date(Date.now() - index * 3600_000).toISOString(),
     }),
@@ -138,6 +147,9 @@ export class RioAssistWidget extends LitElement {
       cancelAnimationFrame(this.conversationScrollbarRaf);
       this.conversationScrollbarRaf = null;
     }
+
+    this.teardownRioClient();
+    this.clearLoadingGuard();
   }
 
   get filteredConversations() {
@@ -367,6 +379,7 @@ export class RioAssistWidget extends LitElement {
         detail: {
           message: content,
           apiBaseUrl: this.apiBaseUrl,
+          token: this.rioToken,
         },
         bubbles: true,
         composed: true,
@@ -378,31 +391,78 @@ export class RioAssistWidget extends LitElement {
     this.message = '';
     this.errorMessage = '';
     this.isLoading = true;
+    this.startLoadingGuard();
 
     try {
-      const result = await invokeAgentRuntime(content, this.sessionId);
-      if (result.sessionId) {
-        this.sessionId = result.sessionId;
-      }
-
-      if (result.text) {
-        const assistantMessage = this.createMessage('assistant', result.text);
-        this.messages = [...this.messages, assistantMessage];
-      }
+      const client = this.ensureRioClient();
+      await client.sendMessage(content);
     } catch (error) {
+      this.clearLoadingGuard();
+      this.isLoading = false;
       this.errorMessage = error instanceof Error
         ? error.message
-        : 'Não foi possível obter resposta do agente.';
-    } finally {
+        : 'Nao foi possivel enviar a mensagem para o agente.';
+    }
+  }
+
+  private ensureRioClient() {
+    const token = this.rioToken.trim();
+    if (!token) {
+      throw new Error(
+        'Informe o token RIO em data-rio-token para conectar no websocket do assistente.',
+      );
+    }
+
+    if (!this.rioClient || !this.rioClient.matchesToken(token)) {
+      this.teardownRioClient();
+      this.rioClient = new RioWebsocketClient(token);
+      this.rioUnsubscribe = this.rioClient.onMessage((incoming) => {
+        this.handleIncomingMessage(incoming);
+      });
+    }
+
+    return this.rioClient;
+  }
+
+  private handleIncomingMessage(message: RioIncomingMessage) {
+    const assistantMessage = this.createMessage('assistant', message.text);
+    this.messages = [...this.messages, assistantMessage];
+    this.clearLoadingGuard();
+    this.isLoading = false;
+  }
+
+  private teardownRioClient() {
+    if (this.rioUnsubscribe) {
+      this.rioUnsubscribe();
+      this.rioUnsubscribe = null;
+    }
+
+    if (this.rioClient) {
+      this.rioClient.close();
+      this.rioClient = null;
+    }
+  }
+
+  private startLoadingGuard() {
+    this.clearLoadingGuard();
+    this.loadingTimer = window.setTimeout(() => {
+      this.loadingTimer = null;
       this.isLoading = false;
+    }, 15000);
+  }
+
+  private clearLoadingGuard() {
+    if (this.loadingTimer !== null) {
+      window.clearTimeout(this.loadingTimer);
+      this.loadingTimer = null;
     }
   }
 
   render() {
     return renderRioAssist(this);
   }
-}
 
+}
 declare global {
   interface HTMLElementTagNameMap {
     'rio-assist-widget': RioAssistWidget;
@@ -412,3 +472,7 @@ declare global {
 if (!customElements.get('rio-assist-widget')) {
   customElements.define('rio-assist-widget', RioAssistWidget);
 }
+
+
+
+
