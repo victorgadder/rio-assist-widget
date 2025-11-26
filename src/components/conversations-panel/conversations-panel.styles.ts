@@ -108,6 +108,7 @@ export const conversationsPanelStyles = css`
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    box-sizing: border-box;
   }
 
   .conversation-list-wrapper {
@@ -125,15 +126,21 @@ export const conversationsPanelStyles = css`
   .conversations-panel--sidebar .conversation-list {
     width: 100%;
     padding-left: 16px;
-    padding-right: 20px;
+    padding-right: 14px;
     overflow-y: auto;
     min-height: 0;
+    scrollbar-width: none;
+  }
+
+  .conversations-panel--sidebar .conversation-list::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 
   .conversation-scrollbar {
     position: absolute;
     top: 8px;
-    right: 6px;
+    right: 8px;
     width: 8px;
     height: calc(100% - 8px);
     border-radius: 999px;
@@ -261,27 +268,26 @@ export const conversationsPanelStyles = css`
 
   .new-conversation-cta__button {
     width: 100%;
-    height: 44px;
-    border-radius: 10px;
+    height: 34px;
+    border-radius: 4px;
     border: 1px solid #30b4c0;
     background: #fff;
-    color: #008b9a;
+    color: #30b4c0;
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+    gap: 8px;
+    padding: 8px 12px;
     cursor: pointer;
     transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
 
   .new-conversation-cta__button img {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
   }
 
   .new-conversation-cta__button:disabled,

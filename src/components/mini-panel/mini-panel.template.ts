@@ -43,7 +43,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
       ${component.isLoading
         ? html`
             <div class="message message--assistant typing">
-              <span>IA está respondendo...</span>
+              <span>Rio Insight está respondendo...</span>
             </div>
           `
         : null}
