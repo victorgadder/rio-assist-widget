@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.7] - 2025-11-26
+- Ajusta auto-scroll da conversa e fixacao do footer na tela cheia.
+- Centraliza conteudo principal na tela fullscreen e exibe atalho para nova conversa ao iniciar interacao.
+- Reduz e compacta o balao de mensagens do usuario, aproximando texto e horario.
+
 ## [0.1.6] - 2025-11-25
 - Atualiza o icone de fechamento do mini painel.
 - Prepara pacote para publicacao.

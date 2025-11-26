@@ -171,13 +171,20 @@ export const fullscreenStyles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 36px 64px 18px;
+    padding: 36px 32px 18px;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    max-width: 1400px;
+    margin: 0 auto;
   }
 
   .fullscreen-chat .panel-body {
     max-width: 920px;
     width: 100%;
-    padding: 12px 48px 12px;
+    padding: 12px 32px 12px;
+    margin: 0 auto;
   }
 
   .fullscreen-chat .panel-footer {

@@ -148,6 +148,15 @@ export class RioAssistWidget extends LitElement {
     ) {
       this.enqueueConversationScrollbarMeasure();
     }
+
+    if (
+      changedProperties.has('messages') ||
+      (changedProperties.has('isLoading') && this.isLoading) ||
+      (changedProperties.has('open') && this.open) ||
+      (changedProperties.has('isFullscreen') && this.isFullscreen)
+    ) {
+      this.scrollConversationToBottom();
+    }
   }
 
   protected firstUpdated(): void {
@@ -494,6 +503,8 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    const wasEmptyConversation = this.messages.length === 0;
+
     this.dispatchEvent(
       new CustomEvent('rioassist:send', {
         detail: {
@@ -508,6 +519,9 @@ export class RioAssistWidget extends LitElement {
 
     const userMessage = this.createMessage('user', content);
     this.messages = [...this.messages, userMessage];
+    if (wasEmptyConversation) {
+      this.showNewConversationShortcut = true;
+    }
     this.message = '';
     this.errorMessage = '';
     this.isLoading = true;
@@ -576,6 +590,18 @@ export class RioAssistWidget extends LitElement {
       window.clearTimeout(this.loadingTimer);
       this.loadingTimer = null;
     }
+  }
+
+  private scrollConversationToBottom() {
+    const containers = Array.from(
+      this.renderRoot.querySelectorAll('.panel-content'),
+    ) as HTMLElement[];
+
+    containers.forEach((container) => {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    });
   }
 
   render() {

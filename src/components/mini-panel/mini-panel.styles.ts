@@ -166,30 +166,35 @@ export const miniPanelStyles = css`
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .message {
     border-radius: 16px;
     border: 1px solid #e4eaee;
-    padding: 12px 16px;
+    padding: 10px 16px;
     max-width: 90%;
     background: #fff;
     color: #1f2f36;
     font-size: 15px;
   }
 
+  .message p {
+    margin: 0;
+    line-height: 1.35;
+  }
+
   .message--user {
     align-self: flex-end;
-    background: #e3f3f6;
-    border-color: #cde6ea;
-    color: #00596b;
+    background: #e5ebf0;
+    border-color: #cfd6dc;
+    color: #1f2f36;
+    padding: 8px 10px;
   }
 
   .message time {
     display: block;
     font-size: 11px;
-    margin-top: 6px;
     color: #8a98a4;
     text-align: right;
   }
@@ -197,6 +202,10 @@ export const miniPanelStyles = css`
   .typing {
     font-style: italic;
     opacity: 0.75;
+  }
+
+  .message--user time {
+    margin-top: 3px;
   }
 
   .panel-footer {
