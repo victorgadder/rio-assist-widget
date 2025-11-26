@@ -324,12 +324,14 @@ export const miniPanelStyles = css`
     border: none;
     display: grid;
     place-items: center;
-    color: #9ba5b2;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1;
     width: 24px;
     height: 24px;
     margin-right: 12px;
+    padding: 0;
+  }
+
+  .close-button img {
+    width: 16px;
+    height: 16px;
   }
 `;

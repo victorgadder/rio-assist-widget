@@ -7,6 +7,7 @@ const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', imp
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
 const iaCentralIconUrl = new URL('../../assets/icons/iaCentralIcon.png', import.meta.url).href;
 const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
+const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
 
 export const renderChatSurface = (component: RioAssistWidget) => {
   const hasMessages = component.messages.length > 0;
@@ -122,7 +123,7 @@ export const renderMiniPanel = (component: RioAssistWidget) => {
             @click=${() => component.handleCloseAction()}
             aria-label="Fechar Rio Insight"
           >
-            x
+            <img src=${closeIconUrl} alt="" aria-hidden="true" />
           </button>
         </div>
         <div class="panel-header__actions">
