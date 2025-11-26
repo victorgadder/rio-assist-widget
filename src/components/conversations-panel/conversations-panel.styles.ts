@@ -134,7 +134,7 @@ export const conversationsPanelStyles = css`
     position: absolute;
     top: 8px;
     right: 6px;
-    width: 6px;
+    width: 8px;
     height: calc(100% - 8px);
     border-radius: 999px;
     background: rgba(125, 143, 162, 0.15);
@@ -145,6 +145,7 @@ export const conversationsPanelStyles = css`
 
   .conversation-scrollbar--visible {
     opacity: 1;
+    pointer-events: auto;
   }
 
   .conversation-list-wrapper--sidebar:hover .conversation-scrollbar {
@@ -158,6 +159,7 @@ export const conversationsPanelStyles = css`
     background: #7d8fa2;
     min-height: 12px;
     display: block;
+    cursor: pointer;
   }
 
   .conversation-item {
@@ -239,5 +241,54 @@ export const conversationsPanelStyles = css`
   .conversation-menu img {
     width: 16px;
     height: 16px;
+  }
+
+  .new-conversation-cta {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.25s ease;
+    padding: 0 16px;
+  }
+
+  .new-conversation-cta.open {
+    max-height: 96px;
+    opacity: 1;
+    transform: translateY(0);
+    margin-bottom: 4px;
+  }
+
+  .new-conversation-cta__button {
+    width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid #30b4c0;
+    background: #fff;
+    color: #008b9a;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .new-conversation-cta__button img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .new-conversation-cta__button:disabled,
+  .new-conversation-cta__button[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: #b6c5cf;
+    color: #7b8a95;
   }
 `;

@@ -1,6 +1,6 @@
-# RIO Assist Widget
+# Rio Insight Widget
 
-Widget lateral do RIO Assist embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
+Widget lateral do Rio Insight embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
 
 ```json
 {
@@ -21,8 +21,8 @@ Widget lateral do RIO Assist embalado como Web Component. Ao receber o token de 
 <script>
   window.RioAssist.init({
     rioToken: '<TOKEN_RIO>',
-    title: 'RIO Assist',
-    buttonLabel: 'RIO Assist',
+    title: 'Rio Insight',
+    buttonLabel: 'Rio Insight',
     suggestions: [
       'Veiculos com problemas',
       'Valor das pecas',

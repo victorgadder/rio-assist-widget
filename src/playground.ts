@@ -2,8 +2,8 @@
 
 const boot = () => {
   window.RioAssist?.init({
-    title: 'RIO Assist',
-    buttonLabel: 'RIO Assist',
+    title: 'Rio Insight',
+    buttonLabel: 'Rio Insight',
     accentColor: '#c02267',
     rioToken: 'SEU_TOKEN_RIO_AQUI',
     suggestions: [
@@ -19,5 +19,6 @@ if (window.RioAssist) {
 } else {
   window.addEventListener('rio-assist-ready', boot, { once: true });
 }
+
 
 

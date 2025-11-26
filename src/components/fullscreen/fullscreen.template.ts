@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderChatSurface } from '../mini-panel/mini-panel.template';
@@ -39,7 +40,30 @@ export const renderFullscreen = (component: RioAssistWidget) => {
       <div class="fullscreen-shell__content">
         <header class="fullscreen-header">
           <div class="fullscreen-header__title">
-            <span class="fullscreen-header__brand">RIO ASSIST</span>
+            <div class="fullscreen-header__brand-row">
+              <span class="fullscreen-header__brand">RIO INSIGHT</span>
+              <button
+                type="button"
+                class=${classMap({
+                  'fullscreen-header__brand-toggle': true,
+                  'fullscreen-header__brand-toggle--open':
+                    component.showNewConversationShortcut,
+                })}
+                aria-label="Alternar ações de conversa"
+                @click=${() => component.toggleNewConversationShortcut()}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M6 9l6 6 6-6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div class="fullscreen-header__tabs">

@@ -43,15 +43,16 @@ export class RioAssistWidget extends LitElement {
     conversationMenuPlacement: { state: true },
     isFullscreen: { type: Boolean, state: true },
     conversationScrollbar: { state: true },
+    showNewConversationShortcut: { type: Boolean, state: true },
   };
 
   open = false;
 
   message = '';
 
-  titleText = 'RIO Assist';
+  titleText = 'Rio Insight';
 
-  buttonLabel = 'RIO Assist';
+  buttonLabel = 'Rio Insight';
 
   placeholder = 'Pergunte alguma coisa';
 
@@ -79,6 +80,8 @@ export class RioAssistWidget extends LitElement {
 
   isFullscreen = false;
 
+  showNewConversationShortcut = false;
+
   conversationScrollbar = {
     height: 0,
     top: 0,
@@ -93,21 +96,31 @@ export class RioAssistWidget extends LitElement {
 
   private loadingTimer: number | null = null;
 
+  private conversationScrollbarDraggingId: number | null = null;
+
+  private conversationScrollbarDragState: {
+    startY: number;
+    startThumbTop: number;
+    trackHeight: number;
+    thumbHeight: number;
+    list: HTMLElement;
+  } | null = null;
+
   conversations: ConversationItem[] = Array.from({ length: 20 }).map(
     (_, index) => ({
       id: `${index + 1}`,
       title: [
-        'CaminhÃµes com problema na frota de veÃ­culos.',
-        'PrÃ³ximas manutenÃ§Ãµes periÃ³dicas preventivas.',
-        'Quais revisÃµes meu plano inclui?',
-        'Como automatizar preenchimento de odÃ´metro.',
-        'Valor das peÃ§as da prÃ³xima revisÃ£o.',
-        'O que Ã© revisÃ£o de assentamento?',
-        'Alertas crÃ­ticos ativos.',
-        'VeÃ­culo superaquecendo, causas e recomendaÃ§Ãµes.',
+        'Caminhões com problema na frota de veículos.',
+        'Próximas manutenções periódicas preventivas.',
+        'Quais revisões meu plano inclui?',
+        'Como automatizar preenchimento de odômetro.',
+        'Valor das peças da próxima revisão.',
+        'O que é revisão de assentamento?',
+        'Alertas críticos ativos.',
+        'Veículo superaquecendo, causas e recomendações.',
         'Calibragem recomendada nos pneus do e-Delivery.',
-        'Quantos mil km trocar o Ã³leo do motor.',
-        'Qual a vida Ãºtil da bateria Moura M100HE.',
+        'Quantos mil km trocar o óleo do motor.',
+        'Qual a vida útil da bateria Moura M100HE.',
       ][index % 11],
       updatedAt: new Date(Date.now() - index * 3600_000).toISOString(),
     }),
@@ -163,6 +176,10 @@ export class RioAssistWidget extends LitElement {
     );
   }
 
+  get hasActiveConversation() {
+    return this.messages.length > 0;
+  }
+
   togglePanel() {
     if (this.isFullscreen) {
       this.exitFullscreen(false);
@@ -199,6 +216,10 @@ export class RioAssistWidget extends LitElement {
     if (!this.showConversations) {
       this.conversationMenuId = null;
     }
+  }
+
+  toggleNewConversationShortcut() {
+    this.showNewConversationShortcut = !this.showNewConversationShortcut;
   }
 
   handleConversationSearch(event: InputEvent) {
@@ -283,13 +304,31 @@ export class RioAssistWidget extends LitElement {
 
     this.isFullscreen = false;
     this.conversationMenuId = null;
+    this.showNewConversationShortcut = false;
     if (restorePanel) {
       this.open = true;
     }
   }
 
   handleCreateConversation() {
-    console.info('[Mock] Criar nova conversa');
+    if (!this.hasActiveConversation) {
+      return;
+    }
+
+    this.clearLoadingGuard();
+    this.isLoading = false;
+    this.messages = [];
+    this.message = '';
+    this.errorMessage = '';
+    this.showConversations = false;
+    this.teardownRioClient();
+    this.showNewConversationShortcut = false;
+    this.dispatchEvent(
+      new CustomEvent('rioassist:new-conversation', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   handleConversationListScroll(event: Event) {
@@ -298,6 +337,87 @@ export class RioAssistWidget extends LitElement {
       return;
     }
     this.updateConversationScrollbar(target);
+  }
+
+  handleConversationScrollbarPointerDown(event: PointerEvent) {
+    const track = event.currentTarget as HTMLElement | null;
+    const list = this.renderRoot.querySelector(
+      '.conversation-list--sidebar',
+    ) as HTMLElement | null;
+
+    if (!track || !list) {
+      return;
+    }
+
+    const trackRect = track.getBoundingClientRect();
+    const thumbHeight = trackRect.height * (this.conversationScrollbar.height / 100);
+    const maxThumbTop = Math.max(trackRect.height - thumbHeight, 0);
+    const scrollRange = Math.max(list.scrollHeight - list.clientHeight, 1);
+    const currentThumbTop = (list.scrollTop / scrollRange) * maxThumbTop;
+    const offsetY = event.clientY - trackRect.top;
+    const isOnThumb = offsetY >= currentThumbTop && offsetY <= currentThumbTop + thumbHeight;
+
+    const nextThumbTop = isOnThumb
+      ? currentThumbTop
+      : Math.min(Math.max(offsetY - thumbHeight / 2, 0), maxThumbTop);
+
+    if (!isOnThumb) {
+      list.scrollTop = (nextThumbTop / Math.max(maxThumbTop, 1)) * (list.scrollHeight - list.clientHeight);
+      this.updateConversationScrollbar(list);
+    }
+
+    track.setPointerCapture(event.pointerId);
+    this.conversationScrollbarDraggingId = event.pointerId;
+    this.conversationScrollbarDragState = {
+      startY: event.clientY,
+      startThumbTop: nextThumbTop,
+      trackHeight: trackRect.height,
+      thumbHeight,
+      list,
+    };
+    event.preventDefault();
+  }
+
+  handleConversationScrollbarPointerMove(event: PointerEvent) {
+    if (
+      this.conversationScrollbarDraggingId === null ||
+      this.conversationScrollbarDraggingId !== event.pointerId ||
+      !this.conversationScrollbarDragState
+    ) {
+      return;
+    }
+
+    const {
+      startY,
+      startThumbTop,
+      trackHeight,
+      thumbHeight,
+      list,
+    } = this.conversationScrollbarDragState;
+
+    const maxThumbTop = Math.max(trackHeight - thumbHeight, 0);
+    const deltaY = event.clientY - startY;
+    const thumbTop = Math.min(Math.max(startThumbTop + deltaY, 0), maxThumbTop);
+    const scrollRange = list.scrollHeight - list.clientHeight;
+
+    if (scrollRange > 0) {
+      list.scrollTop = (thumbTop / Math.max(maxThumbTop, 1)) * scrollRange;
+      this.updateConversationScrollbar(list);
+    }
+
+    event.preventDefault();
+  }
+
+  handleConversationScrollbarPointerUp(event: PointerEvent) {
+    if (this.conversationScrollbarDraggingId !== event.pointerId) {
+      return;
+    }
+
+    const track = event.currentTarget as HTMLElement | null;
+    track?.releasePointerCapture(event.pointerId);
+
+    this.conversationScrollbarDraggingId = null;
+    this.conversationScrollbarDragState = null;
   }
 
   private enqueueConversationScrollbarMeasure() {
@@ -472,6 +592,7 @@ declare global {
 if (!customElements.get('rio-assist-widget')) {
   customElements.define('rio-assist-widget', RioAssistWidget);
 }
+
 
 
 

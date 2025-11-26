@@ -12,8 +12,8 @@ export type RioAssistOptions = {
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
-  title: 'RIO Assist',
-  buttonLabel: 'RIO Assist',
+  title: 'Rio Insight',
+  buttonLabel: 'Rio Insight',
   placeholder: 'Pergunte alguma coisa',
   suggestions: [
     'Veículos com problemas',
@@ -68,5 +68,7 @@ if (typeof window !== 'undefined') {
   };
   window.dispatchEvent(new Event('rio-assist-ready'));
 }
+
+
 
 

@@ -68,7 +68,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
         ${component.suggestions.length > 0
           ? html`
               <div class="suggestions-wrapper">
-                <p class="suggestions-label">Sugestoes de perguntas:</p>
+                <p class="suggestions-label">Sugestões de Perguntas</p>
                 <div class="suggestions">
                   ${component.suggestions.map(
                     (suggestion) => html`
@@ -120,7 +120,7 @@ export const renderMiniPanel = (component: RioAssistWidget) => {
           <button
             class="close-button"
             @click=${() => component.handleCloseAction()}
-            aria-label="Fechar RIO Assist"
+            aria-label="Fechar Rio Insight"
           >
             x
           </button>

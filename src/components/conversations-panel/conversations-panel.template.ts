@@ -7,6 +7,8 @@ const threePointsIconUrl = new URL('../../assets/icons/threePoints.png', import.
 const editIconUrl = new URL('../../assets/icons/edit.png', import.meta.url).href;
 const trashIconUrl = new URL('../../assets/icons/trash.png', import.meta.url).href;
 const searchIconUrl = new URL('../../assets/icons/searchIcon.png', import.meta.url).href;
+const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url)
+  .href;
 
 type ConversationsPanelVariant = 'drawer' | 'sidebar';
 
@@ -46,6 +48,28 @@ const renderConversationSurface = (
   variant: ConversationsPanelVariant,
 ) => {
   const isSidebar = variant === 'sidebar';
+
+  const newConversationCta = isSidebar
+    ? html`
+        <div
+          class=${classMap({
+            'new-conversation-cta': true,
+            open: component.showNewConversationShortcut,
+          })}
+        >
+          <button
+            type="button"
+            class="new-conversation-cta__button"
+            ?disabled=${!component.hasActiveConversation}
+            aria-disabled=${!component.hasActiveConversation}
+            @click=${() => component.handleCreateConversation()}
+          >
+            <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
+            <span>Iniciar nova conversa</span>
+          </button>
+        </div>
+      `
+    : null;
 
   const list = html`
     <div
@@ -109,6 +133,8 @@ const renderConversationSurface = (
   `;
 
   return html`
+    ${newConversationCta}
+
     <div class="conversation-search">
       <img class="search-icon" src=${searchIconUrl} alt="" aria-hidden="true" />
       <input
@@ -134,6 +160,14 @@ const renderConversationSurface = (
                 'conversation-scrollbar--visible':
                   component.conversationScrollbar.visible,
               })}
+              @pointerdown=${(event: PointerEvent) =>
+                component.handleConversationScrollbarPointerDown(event)}
+              @pointermove=${(event: PointerEvent) =>
+                component.handleConversationScrollbarPointerMove(event)}
+              @pointerup=${(event: PointerEvent) =>
+                component.handleConversationScrollbarPointerUp(event)}
+              @pointercancel=${(event: PointerEvent) =>
+                component.handleConversationScrollbarPointerUp(event)}
             >
               <span
                 class="conversation-scrollbar__thumb"

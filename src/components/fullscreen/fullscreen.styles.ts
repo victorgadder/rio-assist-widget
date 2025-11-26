@@ -86,9 +86,40 @@ export const fullscreenStyles = css`
     letter-spacing: 0;
   }
 
+  .fullscreen-header__brand-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fullscreen-header__brand-toggle {
+    border: none;
+    background: transparent;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: #1f2f36;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    margin-left: auto;
+  }
+
+  .fullscreen-header__brand-toggle--open {
+    transform: rotate(180deg);
+  }
+
+  .fullscreen-header__brand-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+
   .fullscreen-header__tab {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 1px;
     color: #1f2f36;
     text-transform: uppercase;

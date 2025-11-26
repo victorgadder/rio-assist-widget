@@ -8,7 +8,7 @@ export const miniPanelStyles = css`
   }
 
   .panel {
-    --header-height: 120px;
+    --header-height: 115px;
     pointer-events: auto;
     position: fixed;
     top: 0;
@@ -227,7 +227,7 @@ export const miniPanelStyles = css`
     color: #a7afbb;
     margin-bottom: 12px;
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0;
   }
 
@@ -241,7 +241,7 @@ export const miniPanelStyles = css`
     min-height: 24px;
     color: #a7afbb;
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-weight: 500;
+    font-weight: 600;
     white-space: nowrap;
   }
 
@@ -321,11 +321,15 @@ export const miniPanelStyles = css`
 
   .close-button {
     background: transparent;
+    border: none;
     display: grid;
     place-items: center;
     color: #9ba5b2;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 600;
     line-height: 1;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
   }
 `;
