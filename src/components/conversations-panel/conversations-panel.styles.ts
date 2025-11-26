@@ -288,7 +288,7 @@ export const conversationsPanelStyles = css`
   .new-conversation-cta__button[aria-disabled='true'] {
     opacity: 0.45;
     cursor: not-allowed;
-    border-color: #b6c5cf;
-    color: #7b8a95;
+    border-color: #7bc1d3ff;
+    color: #88c5d3ff;
   }
 `;
