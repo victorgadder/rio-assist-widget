@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
@@ -30,7 +31,9 @@ export const renderChatSurface = (component: RioAssistWidget) => {
               'message--assistant': message.role === 'assistant',
             })}
           >
-            <p>${message.text}</p>
+            <div class="message__content">
+              ${unsafeHTML(message.html ?? message.text)}
+            </div>
             <time>
               ${new Date(message.timestamp).toLocaleTimeString('pt-BR', {
                 hour: '2-digit',

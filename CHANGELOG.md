@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.9] - 2025-11-26
+- Adiciona renderizacao Markdown com markdown-it + task lists e sanitizacao via DOMPurify para evitar XSS.
+- Atualiza templates/estilos para exibir HTML seguro no chat (listas, code block, blockquote, links com target seguro).
+- Inclui configuracao de env no playground (VITE_RIO_TOKEN/VITE_RIO_API_BASE_URL) para testes locais sem depender de projeto hospedeiro.
+
 ## [0.1.8] - 2025-11-26
 - Corrige sobreposição e alinhamento da barra de rolagem na coluna de conversas em tela cheia, mantendo drag e hover funcionais.
 - Esconde a barra nativa no sidebar para evitar barras duplas e aproxima o track customizado dos botões de três pontos.

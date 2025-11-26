@@ -179,9 +179,42 @@ export const miniPanelStyles = css`
     font-size: 15px;
   }
 
-  .message p {
-    margin: 0;
+  .message__content {
     line-height: 1.35;
+  }
+
+  .message__content p,
+  .message__content ul,
+  .message__content ol {
+    margin: 4px 0;
+  }
+
+  .message__content pre {
+    background: #0d161b;
+    color: #f3f7fb;
+    border-radius: 8px;
+    padding: 10px;
+    overflow-x: auto;
+    margin: 6px 0;
+    font-size: 14px;
+  }
+
+  .message__content code {
+    background: #f1f4f7;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  .message__content blockquote {
+    border-left: 3px solid #cfd6dc;
+    margin: 6px 0;
+    padding-left: 10px;
+    color: #4b5a65;
+  }
+
+  .message__content ul,
+  .message__content ol {
+    padding-left: 20px;
   }
 
   .message--user {

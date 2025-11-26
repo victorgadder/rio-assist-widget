@@ -1,11 +1,15 @@
-﻿import './main';
+import './main';
+
+const rioToken = import.meta.env.VITE_RIO_TOKEN || 'SEU_TOKEN_RIO_AQUI';
+const apiBaseUrl = import.meta.env.VITE_RIO_API_BASE_URL || '';
 
 const boot = () => {
   window.RioAssist?.init({
     title: 'Rio Insight',
     buttonLabel: 'Rio Insight',
     accentColor: '#c02267',
-    rioToken: 'SEU_TOKEN_RIO_AQUI',
+    rioToken,
+    apiBaseUrl,
     suggestions: [
       'Veículos com problemas',
       'Valor das peças',
@@ -19,6 +23,3 @@ if (window.RioAssist) {
 } else {
   window.addEventListener('rio-assist-ready', boot, { once: true });
 }
-
-
-
