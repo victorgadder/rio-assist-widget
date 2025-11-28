@@ -67,7 +67,9 @@ export const renderFullscreen = (component: RioAssistWidget) => {
           </div>
 
           <div class="fullscreen-header__tabs">
-            <span class="fullscreen-header__tab">CONVERSA</span>
+            ${component.activeConversationTitle
+              ? html`<span class="fullscreen-header__tab">${component.activeConversationTitle}</span>`
+              : null}
           </div>
 
           <div class="fullscreen-header__actions">

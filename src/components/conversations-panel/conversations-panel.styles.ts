@@ -173,12 +173,14 @@ export const conversationsPanelStyles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px 0 6px;
+    padding: 0 40px 0 6px;
     border-radius: 8px;
     color: #1f2f36;
     font-size: 15px;
     position: relative;
     height: 40px;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease;
   }
 
   .conversations-panel--sidebar .conversation-item {
@@ -199,6 +201,17 @@ export const conversationsPanelStyles = css`
   .conversation-item__text {
     flex: 1;
     padding-right: 16px;
+    transition: color 0.2s ease;
+  }
+
+  .conversation-item:hover .conversation-item__text,
+  .conversation-item:focus-visible .conversation-item__text {
+    color: var(--accent-color, #008b9a);
+  }
+
+  .conversation-item:hover,
+  .conversation-item:focus-visible {
+    background: rgba(0, 139, 154, 0.08);
   }
 
   .conversation-menu-button {
@@ -210,6 +223,8 @@ export const conversationsPanelStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-left: 4px;
+    flex-shrink: 0;
   }
 
   .conversation-menu {
@@ -248,6 +263,12 @@ export const conversationsPanelStyles = css`
   .conversation-menu img {
     width: 16px;
     height: 16px;
+  }
+
+  .conversation-loading {
+    font-size: 13px;
+    color: #4b5b68;
+    padding: 6px 12px 2px;
   }
 
   .new-conversation-cta {

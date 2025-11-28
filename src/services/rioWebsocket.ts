@@ -1,10 +1,11 @@
 const WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
-const DEFAULT_AGENT_MODEL = 'eu.amazon.nova-pro-v1:0';
+const HEARTBEAT_INTERVAL_MS = 5 * 60_000; // keep-alive before the 10min idle timeout
 
 export type RioIncomingMessage = {
   text: string;
   raw: string;
   data: unknown;
+  action?: string;
 };
 
 export class RioWebsocketClient {
@@ -16,6 +17,8 @@ export class RioWebsocketClient {
 
   private readonly listeners = new Set<(message: RioIncomingMessage) => void>();
 
+  private heartbeatId: number | null = null;
+
   constructor(token: string) {
     this.token = token;
   }
@@ -24,13 +27,25 @@ export class RioWebsocketClient {
     return this.token === value;
   }
 
-  async sendMessage(message: string) {
+  async sendMessage(message: string, conversationId?: string | null) {
     const socket = await this.ensureConnection();
 
     const payload = {
       action: 'sendMessage',
       message,
-      agentModel: DEFAULT_AGENT_MODEL,
+      conversationId: conversationId ?? null,
+    };
+
+    console.info('[RioAssist][ws] enviando payload de mensagem', payload);
+    socket.send(JSON.stringify(payload));
+  }
+
+  async requestHistory(options: { conversationId?: string | null; limit?: number } = {}) {
+    const socket = await this.ensureConnection();
+    const payload: Record<string, unknown> = {
+      action: 'getHistory',
+      limit: options.limit ?? 50,
+      conversationId: options.conversationId ?? null,
     };
 
     socket.send(JSON.stringify(payload));
@@ -42,6 +57,7 @@ export class RioWebsocketClient {
   }
 
   close() {
+    this.stopHeartbeat();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.close();
     }
@@ -69,6 +85,7 @@ export class RioWebsocketClient {
     this.socket.addEventListener('close', () => {
       this.connectPromise = null;
       this.socket = null;
+      this.stopHeartbeat();
     });
 
     this.connectPromise = new Promise((resolve, reject) => {
@@ -79,11 +96,15 @@ export class RioWebsocketClient {
 
       const handleOpen = () => {
         cleanup();
+        if (this.socket) {
+          this.startHeartbeat(this.socket);
+        }
         resolve();
       };
 
       const handleError = () => {
         cleanup();
+        this.stopHeartbeat();
         this.socket?.close();
         this.socket = null;
         this.connectPromise = null;
@@ -112,14 +133,38 @@ export class RioWebsocketClient {
     return this.socket;
   }
 
+  private startHeartbeat(socket: WebSocket) {
+    this.stopHeartbeat();
+    this.heartbeatId = window.setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ action: 'ping' }));
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatId !== null) {
+      window.clearInterval(this.heartbeatId);
+      this.heartbeatId = null;
+    }
+  }
+
   private async handleMessage(event: MessageEvent) {
     const raw = await this.readMessage(event.data);
     let parsed: unknown = null;
     let text = raw;
+    let action: string | undefined;
 
     try {
       parsed = JSON.parse(raw);
       if (typeof parsed === 'object' && parsed !== null) {
+        const maybeAction =
+          (parsed as any).action ?? (parsed as any).type ?? (parsed as any).event;
+
+        if (typeof maybeAction === 'string') {
+          action = maybeAction;
+        }
+
         const maybeText =
           (parsed as any).message ??
           (parsed as any).response ??
@@ -134,7 +179,7 @@ export class RioWebsocketClient {
       parsed = null;
     }
 
-    this.listeners.forEach((listener) => listener({ text, raw, data: parsed }));
+    this.listeners.forEach((listener) => listener({ text, raw, data: parsed, action }));
   }
 
   private async readMessage(

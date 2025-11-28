@@ -5,8 +5,7 @@ Widget lateral do Rio Insight embalado como Web Component. Ao receber o token de
 ```json
 {
   "action": "sendMessage",
-  "message": "<mensagem do usuario>",
-  "agentModel": "eu.amazon.nova-pro-v1:0"
+  "message": "<mensagem do usuario>"
 }
 ```
 

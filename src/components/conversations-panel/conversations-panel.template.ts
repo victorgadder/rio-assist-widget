@@ -84,7 +84,19 @@ const renderConversationSurface = (
           const menuOpen = component.conversationMenuId === conversation.id;
 
           return html`
-            <div class="conversation-item">
+            <div
+              class="conversation-item"
+              role="button"
+              tabindex="0"
+              title=${`Recuperar ${conversation.title}`}
+              @click=${() => component.handleConversationSelect(conversation.id)}
+              @keydown=${(event: KeyboardEvent) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  component.handleConversationSelect(conversation.id);
+                }
+              }}
+            >
               <div class="conversation-item__text">
                 ${conversation.title}
               </div>
@@ -151,6 +163,9 @@ const renderConversationSurface = (
         'conversation-list-wrapper--sidebar': isSidebar,
       })}
     >
+      ${component.conversationHistoryLoading
+        ? html`<div class="conversation-loading">Carregando conversas...</div>`
+        : null}
       ${list}
       ${isSidebar
         ? html`
