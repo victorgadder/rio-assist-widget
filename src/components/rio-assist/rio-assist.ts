@@ -25,6 +25,13 @@ type ConversationItem = {
   updatedAt: string;
 };
 
+export type HeaderActionConfig = {
+  id?: string;
+  iconUrl: string;
+  ariaLabel?: string;
+  onClick?: () => void;
+};
+
 export class RioAssistWidget extends LitElement {
   static styles = widgetStyles;
 
@@ -51,6 +58,8 @@ export class RioAssistWidget extends LitElement {
     conversations: { state: true },
     conversationHistoryLoading: { type: Boolean, state: true },
     activeConversationTitle: { state: true },
+    headerActions: { attribute: false },
+    homeUrl: { type: String, attribute: 'data-home-url' },
   };
 
   open = false;
@@ -100,6 +109,10 @@ export class RioAssistWidget extends LitElement {
   private refreshConversationsAfterResponse = false;
 
   activeConversationTitle: string | null = null;
+
+  headerActions: HeaderActionConfig[] = [];
+
+  homeUrl = '';
 
   private generateConversationId() {
     if (!this.conversationUserId) {
@@ -354,6 +367,52 @@ export class RioAssistWidget extends LitElement {
       action === 'rename' ? 'Renomear' : 'Excluir'
     } "${conversation.title}"`;
     console.info(`[Mock] ${message}`);
+  }
+
+  handleHomeNavigation() {
+    const detail = { url: this.homeUrl || null };
+    const allowed = this.dispatchEvent(
+      new CustomEvent('rioassist:home', {
+        detail,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+
+    if (!allowed) {
+      return;
+    }
+
+    if (this.homeUrl) {
+      window.location.assign(this.homeUrl);
+    }
+  }
+
+  handleHeaderActionClick(action: HeaderActionConfig, index: number) {
+    const detail = {
+      index,
+      id: action.id ?? null,
+      ariaLabel: action.ariaLabel ?? null,
+      iconUrl: action.iconUrl,
+    };
+
+    const allowed = this.dispatchEvent(
+      new CustomEvent('rioassist:header-action', {
+        detail,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+
+    if (!allowed) {
+      return;
+    }
+
+    if (typeof action.onClick === 'function') {
+      action.onClick();
+    }
   }
 
   handleCloseAction() {

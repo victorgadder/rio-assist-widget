@@ -293,12 +293,13 @@ export const miniPanelStyles = css`
     gap: 12px;
     border: 1px solid #a4afbb;
     border-radius: 80px;
-    padding: 10px 20px;
+    padding: 8px 12px 8px 16px;
     background: #fff;
     width: 100%;
     max-width: 520px;
     margin-bottom: 0;
-    max-height: 56px;
+    height: 56px;
+    box-sizing: border-box;
   }
 
   form input {
@@ -319,19 +320,20 @@ export const miniPanelStyles = css`
   }
 
   .input-button {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: none;
     background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
   }
 
   .input-button img {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
   }
 
   .input-button:disabled {

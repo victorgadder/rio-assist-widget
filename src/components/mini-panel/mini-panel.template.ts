@@ -9,6 +9,7 @@ const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta
 const iaCentralIconUrl = new URL('../../assets/icons/iaCentralIcon.png', import.meta.url).href;
 const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
+const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
 
 export const renderChatSurface = (component: RioAssistWidget) => {
   const hasMessages = component.messages.length > 0;
@@ -103,6 +104,14 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             }}
             ?disabled=${component.isLoading}
           />
+          <button
+            class="input-button submit-button"
+            type="submit"
+            aria-label="Enviar mensagem"
+            ?disabled=${component.isLoading}
+          >
+            <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
+          </button>
         </form>
 
         <p class="footnote">

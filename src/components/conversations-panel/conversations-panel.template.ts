@@ -9,6 +9,7 @@ const trashIconUrl = new URL('../../assets/icons/trash.png', import.meta.url).hr
 const searchIconUrl = new URL('../../assets/icons/searchIcon.png', import.meta.url).href;
 const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url)
   .href;
+const hamburgerBlack = new URL('../../assets/icons/hamburgerBlack.png', import.meta.url).href;
 
 type ConversationsPanelVariant = 'drawer' | 'sidebar';
 
@@ -146,6 +147,15 @@ const renderConversationSurface = (
 
   return html`
     ${newConversationCta}
+
+    ${isSidebar
+      ? html`
+          <button class="recent-conversations-button" type="button" aria-label="Conversas recentes">
+            <img src=${hamburgerBlack} alt="" aria-hidden="true" />
+            <span>Conversas recentes</span>
+          </button>
+        `
+      : null}
 
     <div class="conversation-search">
       <img class="search-icon" src=${searchIconUrl} alt="" aria-hidden="true" />

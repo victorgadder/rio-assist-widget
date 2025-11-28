@@ -1,6 +1,6 @@
 {
   "name": "rio-assist-widget",
-  "version": "0.1.11",
+  "version": "0.1.14",
   "description": "Web Component do painel lateral Rio Insight, pronto para ser embutido em qualquer projeto.",
   "type": "module",
   "scripts": {

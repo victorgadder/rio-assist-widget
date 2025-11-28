@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import { classMap } from 'lit/directives/class-map.js';
-import type { RioAssistWidget } from '../rio-assist/rio-assist';
+import type { HeaderActionConfig, RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderChatSurface } from '../mini-panel/mini-panel.template';
 
@@ -8,14 +8,29 @@ const homeIconUrl = new URL('../../assets/icons/homeIcon.png', import.meta.url).
 const checkFrameIconUrl = new URL('../../assets/icons/checkFrame.png', import.meta.url).href;
 const infoFrameIconUrl = new URL('../../assets/icons/infoFrame.png', import.meta.url).href;
 const profileFrameIconUrl = new URL('../../assets/icons/profileFrame.png', import.meta.url).href;
+const resizeScreenIconUrl = new URL('../../assets/icons/resizeScreen.png', import.meta.url).href;
+
+const defaultHeaderActions: HeaderActionConfig[] = [
+  { id: 'status', iconUrl: checkFrameIconUrl, ariaLabel: 'Status' },
+  { id: 'info', iconUrl: infoFrameIconUrl, ariaLabel: 'Informacoes' },
+  { id: 'profile', iconUrl: profileFrameIconUrl, ariaLabel: 'Perfil de usuario' },
+];
 
 export const renderFullscreen = (component: RioAssistWidget) => {
   const chatSurface = renderChatSurface(component);
+  const headerActions = (component.headerActions?.length
+    ? component.headerActions
+    : defaultHeaderActions) as HeaderActionConfig[];
 
   return html`
     <section class="fullscreen-shell" role="dialog" aria-modal="true">
       <div class="fullscreen-shell__rail">
-        <button type="button" class="rail-button" aria-label="Ir para home">
+        <button
+          type="button"
+          class="rail-button"
+          aria-label="Ir para home"
+          @click=${() => component.handleHomeNavigation()}
+        >
           <img src=${homeIconUrl} alt="" aria-hidden="true" />
         </button>
         <button
@@ -73,17 +88,29 @@ export const renderFullscreen = (component: RioAssistWidget) => {
           </div>
 
           <div class="fullscreen-header__actions">
-            <button type="button" class="fullscreen-header__icon" aria-label="Status">
-              <img src=${checkFrameIconUrl} alt="" aria-hidden="true" />
-            </button>
-            <button type="button" class="fullscreen-header__icon" aria-label="Informacoes">
-              <img src=${infoFrameIconUrl} alt="" aria-hidden="true" />
-            </button>
-            <button type="button" class="fullscreen-header__icon" aria-label="Perfil de usuario">
-              <img src=${profileFrameIconUrl} alt="" aria-hidden="true" />
-            </button>
+            ${headerActions.map(
+              (action, index) => html`
+                <button
+                  type="button"
+                  class="fullscreen-header__icon"
+                  aria-label=${action.ariaLabel ?? 'Acao do cabecalho'}
+                  @click=${() => component.handleHeaderActionClick(action, index)}
+                >
+                  <img src=${action.iconUrl} alt="" aria-hidden="true" />
+                </button>
+              `,
+            )}
           </div>
         </header>
+
+        <button
+          type="button"
+          class="fullscreen-exit-inline"
+          aria-label="Retornar para painel compacto"
+          @click=${() => component.exitFullscreen(true)}
+        >
+          <img src=${resizeScreenIconUrl} alt="" aria-hidden="true" />
+        </button>
 
         <div class="fullscreen-grid">
           ${renderConversationsPanel(component, { variant: 'sidebar' })}

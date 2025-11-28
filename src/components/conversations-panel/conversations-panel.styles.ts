@@ -61,6 +61,27 @@ export const conversationsPanelStyles = css`
     overflow: hidden;
   }
 
+  .recent-conversations-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px 6px 16px;
+    border: none;
+    background: transparent;
+    color: #1f2f36;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: left;
+    width: calc(100% - 24px);
+    cursor: pointer;
+  }
+
+  .recent-conversations-button img {
+    width: 24px;
+    height: 24px;
+  }
+
   .conversation-search {
     display: flex;
     align-items: center;

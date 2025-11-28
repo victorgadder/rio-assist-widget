@@ -27,6 +27,7 @@ export const fullscreenStyles = css`
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
   }
 
   .rail-button {
@@ -156,6 +157,26 @@ export const fullscreenStyles = css`
   .fullscreen-header__icon img {
     width: 24px;
     height: 24px;
+  }
+
+  .fullscreen-exit-inline {
+    position: absolute;
+    top: 56px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .fullscreen-exit-inline img {
+    width: 28px;
+    height: 28px;
   }
 
   .fullscreen-grid {
