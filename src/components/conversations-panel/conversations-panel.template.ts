@@ -176,6 +176,9 @@ const renderConversationSurface = (
       ${component.conversationHistoryLoading
         ? html`<div class="conversation-loading">Carregando conversas...</div>`
         : null}
+      ${component.conversationHistoryError
+        ? html`<div class="conversation-error">${component.conversationHistoryError}</div>`
+        : null}
       ${list}
       ${isSidebar
         ? html`

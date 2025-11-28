@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.18] - 2025-11-28
+- Adiciona dialogo de confirmacao antes de excluir conversa (Cancelar/Excluir) a partir do menu de tres pontos.
+- Continua emitindo 
+rioassist:conversation-delete; ao confirmar, remove localmente via applyConversationDeletion.
+
+## [0.1.17] - 2025-11-28
+- Exibe mensagem de erro na lista de conversas quando a carga do historico falhar (requestConversationHistory).
+
+## [0.1.16] - 2025-11-28
+- Aciona eventos reais nos botoes de menu de conversa (tres pontos): rioassist:conversation-rename e rioassist:conversation-delete com detalhes da conversa.
+- Adiciona helpers applyConversationRename e applyConversationDeletion para atualizar o estado local apos sucesso no backend (renomear titulo e remover conversa/estado ativo).
+
+## [0.1.15] - 2025-11-28
+- Carrega a lista de conversas ao entrar na tela fullscreen para evitar sidebar vazia na primeira abertura.
+
 ## [0.1.14] - 2025-11-28
 - Torna configuraveis os tres botoes da header em fullscreen, permitindo customizar icones e acoes via headerActions (mantem icones atuais como padrao).
 - Dispara evento rioassist:header-action ao clicar em cada botao para integracao com o projeto hospedeiro.
@@ -13,42 +28,47 @@
 
 ## [0.1.11] - 2025-11-27
 - Integra conversa real via websocket (getHistory) para listar e carregar mensagens, com logs e loading.
-- Normaliza histórico intercalando usuário (message) e assistente (response), filtrando pares sem resposta.
-- Atualiza conversas automaticamente após nova conversa (incluindo fullscreen) e exibe título ativo na aba.
-- Gera conversationId com sufixo aleatório para evitar colisão após reinício e envia nos payloads.
-- Ajustes de UI: hover/tooltip em conversas, loading no painel, alinhamento dos menus e correção do tab no fullscreen.
-- Build atualizado para publicação no npm.
+- Normaliza histï¿½rico intercalando usuï¿½rio (message) e assistente (response), filtrando pares sem resposta.
+- Atualiza conversas automaticamente apï¿½s nova conversa (incluindo fullscreen) e exibe tï¿½tulo ativo na aba.
+- Gera conversationId com sufixo aleatï¿½rio para evitar colisï¿½o apï¿½s reinï¿½cio e envia nos payloads.
+- Ajustes de UI: hover/tooltip em conversas, loading no painel, alinhamento dos menus e correï¿½ï¿½o do tab no fullscreen.
+- Build atualizado para publicaï¿½ï¿½o no npm.
 
 ## [0.1.10] - 2025-11-27
 - Ajusta healthcheck para responder corretamente no painel e no bundle.
-- Conecta o histórico de “Minhas Conversas” a dados reais vindos do backend, exibindo informações atualizadas na interface.
+- Conecta o histï¿½rico de ï¿½Minhas Conversasï¿½ a dados reais vindos do backend, exibindo informaï¿½ï¿½es atualizadas na interface.
 
 ## [0.1.9] - 2025-11-26
-- Adiciona renderização Markdown com markdown-it + task lists e sanitização via DOMPurify para evitar XSS.
+- Adiciona renderizaï¿½ï¿½o Markdown com markdown-it + task lists e sanitizaï¿½ï¿½o via DOMPurify para evitar XSS.
 - Atualiza templates/estilos para exibir HTML seguro no chat (listas, code block, blockquote, links com target seguro).
-- Inclui configuração de env no playground (VITE_RIO_TOKEN/VITE_RIO_API_BASE_URL) para testes locais sem depender de projeto hospedeiro.
+- Inclui configuraï¿½ï¿½o de env no playground (VITE_RIO_TOKEN/VITE_RIO_API_BASE_URL) para testes locais sem depender de projeto hospedeiro.
 
 ## [0.1.8] - 2025-11-26
-- Corrige sobreposição e alinhamento da barra de rolagem na coluna de conversas em tela cheia, mantendo drag e hover funcionais.
-- Esconde a barra nativa no sidebar para evitar barras duplas e aproxima o track customizado dos botões de três pontos.
-- Ajusta o botão “Iniciar nova conversa” na coluna para o layout compacto solicitado (altura menor, bordas suaves e ícone reduzido).
+- Corrige sobreposiï¿½ï¿½o e alinhamento da barra de rolagem na coluna de conversas em tela cheia, mantendo drag e hover funcionais.
+- Esconde a barra nativa no sidebar para evitar barras duplas e aproxima o track customizado dos botï¿½es de trï¿½s pontos.
+- Ajusta o botï¿½o ï¿½Iniciar nova conversaï¿½ na coluna para o layout compacto solicitado (altura menor, bordas suaves e ï¿½cone reduzido).
 
 ## [0.1.7] - 2025-11-26
-- Ajusta auto-scroll da conversa e fixação do footer na tela cheia.
-- Centraliza conteúdo principal na tela fullscreen e exibe atalho para nova conversa ao iniciar interação.
-- Reduz e compacta o balão de mensagens do usuário, aproximando texto e horário.
+- Ajusta auto-scroll da conversa e fixaï¿½ï¿½o do footer na tela cheia.
+- Centraliza conteï¿½do principal na tela fullscreen e exibe atalho para nova conversa ao iniciar interaï¿½ï¿½o.
+- Reduz e compacta o balï¿½o de mensagens do usuï¿½rio, aproximando texto e horï¿½rio.
 
 ## [0.1.6] - 2025-11-25
-- Atualiza o ícone de fechamento do mini painel.
-- Prepara pacote para publicação.
+- Atualiza o ï¿½cone de fechamento do mini painel.
+- Prepara pacote para publicaï¿½ï¿½o.
 
 ## [0.1.4] - 2025-11-25
-- Incrementa versão para distribuir últimos ajustes do widget.
-- Recompila bundle e prepara pacote para publicação.
+- Incrementa versï¿½o para distribuir ï¿½ltimos ajustes do widget.
+- Recompila bundle e prepara pacote para publicaï¿½ï¿½o.
 
 ## [0.1.2] - 2025-11-25
-- Atualiza o modelo padrão do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
-- Documentação e bundle compilado sincronizados com o novo modelo.
+- Atualiza o modelo padrï¿½o do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
+- Documentaï¿½ï¿½o e bundle compilado sincronizados com o novo modelo.
+
+
+
+
+
 
 
 

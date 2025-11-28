@@ -22,6 +22,60 @@ const baseStyles = css`
     border-radius: 999px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: grid;
+    place-items: center;
+    z-index: 2147484000;
+    pointer-events: auto;
+  }
+
+  .dialog {
+    width: min(360px, calc(100% - 32px));
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dialog__message {
+    margin: 0;
+    font-size: 16px;
+    color: #1f2f36;
+  }
+
+  .dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .dialog__button {
+    min-width: 96px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .dialog__button--ghost {
+    background: #fff;
+    border-color: #c7d0d9;
+    color: #1f2f36;
+  }
+
+  .dialog__button--danger {
+    background: #008b9a;
+    color: #fff;
+  }
 `;
 
 export const widgetStyles = [

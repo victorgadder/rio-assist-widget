@@ -25,6 +25,12 @@ type ConversationItem = {
   updatedAt: string;
 };
 
+type ConversationDeleteTarget = {
+  id: string;
+  title: string;
+  index: number;
+};
+
 export type HeaderActionConfig = {
   id?: string;
   iconUrl: string;
@@ -58,6 +64,8 @@ export class RioAssistWidget extends LitElement {
     conversations: { state: true },
     conversationHistoryLoading: { type: Boolean, state: true },
     activeConversationTitle: { state: true },
+    conversationHistoryError: { type: String, state: true },
+    deleteConversationTarget: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
   };
@@ -105,6 +113,10 @@ export class RioAssistWidget extends LitElement {
   };
 
   conversationHistoryLoading = false;
+
+  conversationHistoryError = '';
+
+  deleteConversationTarget: ConversationDeleteTarget | null = null;
 
   private refreshConversationsAfterResponse = false;
 
@@ -358,15 +370,22 @@ export class RioAssistWidget extends LitElement {
 
   handleConversationAction(action: 'rename' | 'delete', id: string) {
     this.conversationMenuId = null;
-    const conversation = this.conversations.find((item) => item.id === id);
-    if (!conversation) {
+    const conversationIndex = this.conversations.findIndex((item) => item.id === id);
+    if (conversationIndex === -1) {
       return;
     }
 
-    const message = `${
-      action === 'rename' ? 'Renomear' : 'Excluir'
-    } "${conversation.title}"`;
-    console.info(`[Mock] ${message}`);
+    const conversation = this.conversations[conversationIndex];
+    if (action === 'delete') {
+      this.deleteConversationTarget = {
+        id: conversation.id,
+        title: conversation.title,
+        index: conversationIndex,
+      };
+      return;
+    }
+
+    this.dispatchConversationAction('rename', conversation, conversationIndex);
   }
 
   handleHomeNavigation() {
@@ -386,6 +405,96 @@ export class RioAssistWidget extends LitElement {
 
     if (this.homeUrl) {
       window.location.assign(this.homeUrl);
+    }
+  }
+
+  applyConversationRename(id: string, newTitle: string) {
+    if (!id || !newTitle) {
+      return;
+    }
+
+    let changed = false;
+    this.conversations = this.conversations.map((conversation) => {
+      if (conversation.id === id) {
+        changed = true;
+        return { ...conversation, title: newTitle };
+      }
+      return conversation;
+    });
+
+    if (!changed) {
+      return;
+    }
+
+    if (this.currentConversationId === id) {
+      this.activeConversationTitle = newTitle;
+    }
+  }
+
+  applyConversationDeletion(id: string) {
+    if (!id) {
+      return;
+    }
+
+    const wasActive = this.currentConversationId === id;
+    const next = this.conversations.filter((conversation) => conversation.id !== id);
+
+    if (next.length === this.conversations.length) {
+      return;
+    }
+
+    this.conversations = next;
+
+    if (wasActive) {
+      this.currentConversationId = null;
+      this.activeConversationTitle = null;
+      this.messages = [];
+    }
+  }
+
+  confirmDeleteConversation() {
+    const target = this.deleteConversationTarget;
+    if (!target) {
+      return;
+    }
+
+    this.dispatchConversationAction('delete', { id: target.id, title: target.title }, target.index);
+    this.deleteConversationTarget = null;
+  }
+
+  cancelDeleteConversation() {
+    this.deleteConversationTarget = null;
+  }
+
+  private dispatchConversationAction(
+    action: 'rename' | 'delete',
+    conversation: Pick<ConversationItem, 'id' | 'title'>,
+    index: number,
+  ) {
+    const eventName =
+      action === 'rename' ? 'rioassist:conversation-rename' : 'rioassist:conversation-delete';
+    const detail = {
+      id: conversation.id,
+      title: conversation.title,
+      index,
+      action,
+    };
+
+    const allowed = this.dispatchEvent(
+      new CustomEvent(eventName, {
+        detail,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+
+    if (!allowed) {
+      return;
+    }
+
+    if (action === 'delete') {
+      this.applyConversationDeletion(conversation.id);
     }
   }
 
@@ -436,6 +545,7 @@ export class RioAssistWidget extends LitElement {
     this.isFullscreen = true;
     this.open = false;
     this.showConversations = false;
+    this.requestConversationHistory();
   }
 
   exitFullscreen(restorePanel: boolean) {
@@ -746,10 +856,15 @@ export class RioAssistWidget extends LitElement {
         limit,
       });
 
+      this.conversationHistoryError = '';
       this.conversationHistoryLoading = true;
       await client.requestHistory({ conversationId, limit });
     } catch (error) {
       console.error('[RioAssist][history] erro ao solicitar historico', error);
+      this.conversationHistoryError =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Nao foi possivel carregar as conversas.';
       this.conversationHistoryLoading = false;
     }
   }
@@ -813,6 +928,7 @@ export class RioAssistWidget extends LitElement {
       console.info('[RioAssist][history] payload sem itens para montar lista de conversas');
       this.conversations = [];
       this.conversationHistoryLoading = false;
+      this.conversationHistoryError = '';
       return;
     }
 
@@ -853,6 +969,7 @@ export class RioAssistWidget extends LitElement {
 
     this.conversations = conversations;
     this.conversationHistoryLoading = false;
+    this.conversationHistoryError = '';
     this.syncActiveConversationTitle();
     console.info('[RioAssist][history] conversas normalizadas', conversations);
   }

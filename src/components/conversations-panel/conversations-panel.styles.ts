@@ -292,6 +292,12 @@ export const conversationsPanelStyles = css`
     padding: 6px 12px 2px;
   }
 
+  .conversation-error {
+    font-size: 13px;
+    color: #a33c3c;
+    padding: 6px 12px 2px;
+  }
+
   .new-conversation-cta {
     overflow: hidden;
     max-height: 0;
