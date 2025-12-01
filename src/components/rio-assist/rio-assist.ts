@@ -1029,6 +1029,13 @@ export class RioAssistWidget extends LitElement {
       data: message.data,
     });
 
+    // Handle "processing" type messages - just keep loading state, don't create message
+    if (message.action === 'processing') {
+      console.info('[RioAssist][ws] processando mensagem - aguardando resposta final');
+      // Keep isLoading = true, don't create a message balloon
+      return;
+    }
+
     const assistantMessage = this.createMessage('assistant', message.text);
     this.messages = [...this.messages, assistantMessage];
     this.clearLoadingGuard();

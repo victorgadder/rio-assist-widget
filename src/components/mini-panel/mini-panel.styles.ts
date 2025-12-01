@@ -235,6 +235,26 @@ export const miniPanelStyles = css`
   .typing {
     font-style: italic;
     opacity: 0.75;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .typing::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--accent-color, #008B9A);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: typing-spin 0.8s linear infinite;
+  }
+
+  @keyframes typing-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .typing__dots {
