@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.1.23] - 2025-11-28
+- Sugestoes de perguntas agora fazem wrap (flex-wrap) para quebrar linha quando nao houver espaco.
+
+## [0.1.22] - 2025-11-28
+- Anima reticencias do indicador de resposta e mantem texto dinamico conforme tempo de espera (20s: "continua respondendo"; 60s: aviso de demora maior), mantendo input desabilitado ate resposta/erro.
+
+## [0.1.21] - 2025-11-28
+- Mantem isLoading ativo ate receber resposta real do agente (remove timeout de 15s); o estado de "Rio Insight esta respondendo..." permanece e a caixa fica desabilitada ate chegar a resposta ou erro.
+
+## [0.1.20] - 2025-11-28
+- Ignora mensagens de websocket com action processing/conversationRenamed/conversationDeleted na transcricao do chat.
+- Trata eventos de rename/delete vindos do backend aplicando titulo ou remocao local (sincroniza lista e conversa ativa).
+- Extrai e reaproveita campos conversationId/
+ewTitle do payload e limpa mensagens de erro ao sucesso.
+
+## [0.1.19] - 2025-11-28
+- Integra renomear/excluir conversa ao backend via websocket (payloads renameConversation/deleteConversation).
+- Renomear agora abre dialogo com input; confirma envia ao backend e aplica localmente.
+- Excluir segue com dialogo de confirmacao; ao confirmar envia delete e, se bem-sucedido, remove localmente.
+- Eventos ioassist:conversation-rename/ioassist:conversation-delete continuam disparados e podem ser cancelados.
+
 ## [0.1.18] - 2025-11-28
 - Adiciona dialogo de confirmacao antes de excluir conversa (Cancelar/Excluir) a partir do menu de tres pontos.
 - Continua emitindo 
@@ -64,6 +85,11 @@ rioassist:conversation-delete; ao confirmar, remove localmente via applyConversa
 ## [0.1.2] - 2025-11-25
 - Atualiza o modelo padr�o do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
 - Documenta��o e bundle compilado sincronizados com o novo modelo.
+
+
+
+
+
 
 
 

@@ -16,6 +16,35 @@ export const renderRioAssist = (component: RioAssistWidget) => {
       ${renderFloatingButton(component)}
       ${renderMiniPanel(component)}
       ${component.isFullscreen ? renderFullscreen(component) : null}
+      ${component.renameConversationTarget
+        ? html`
+            <div class="dialog-overlay" role="dialog" aria-modal="true">
+              <div class="dialog">
+                <p class="dialog__message">Digite o novo título para a conversa:</p>
+                <input
+                  class="dialog__input"
+                  type="text"
+                  .value=${component.renameConversationTarget.draft}
+                  @input=${(event: InputEvent) => component.handleRenameDraft(event)}
+                  aria-label="Novo titulo da conversa"
+                />
+                <div class="dialog__actions">
+                  <button type="button" class="dialog__button dialog__button--ghost" @click=${() =>
+                    component.cancelRenameConversation()}>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--primary"
+                    @click=${() => component.confirmRenameConversation()}
+                  >
+                    Renomear
+                  </button>
+                </div>
+              </div>
+            </div>
+          `
+        : null}
       ${component.deleteConversationTarget
         ? html`
             <div class="dialog-overlay" role="dialog" aria-modal="true">

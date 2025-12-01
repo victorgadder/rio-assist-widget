@@ -23,9 +23,15 @@ Widget lateral do Rio Insight embalado como Web Component. Ao receber o token de
     title: 'Rio Insight',
     buttonLabel: 'Rio Insight',
     suggestions: [
-      'Veiculos com problemas',
-      'Valor das pecas',
-      'Planos de manutencao'
+      'Resumo da Frota',
+      'Frota Disponível',
+      'Chamados Abertos',
+      'Parados + Causas',
+      'Aguardando Peças',
+      'Principais Gargalos',
+      'Tempo por Concessionária',
+      'Tempo de Ciclo',
+      'Preventiva x Corretiva',
     ],
   });
 </script>

@@ -104,6 +104,10 @@ export class RioAssistWidget extends LitElement {
 
   errorMessage = '';
 
+  get loadingLabel() {
+    return this.loadingLabelInternal;
+  }
+
   showConversations = false;
 
   conversationSearch = '';
@@ -129,6 +133,10 @@ export class RioAssistWidget extends LitElement {
   deleteConversationTarget: ConversationDeleteTarget | null = null;
 
   renameConversationTarget: ConversationRenameTarget | null = null;
+
+  private loadingLabelInternal = 'Rio Insight está respondendo...';
+  private loadingTimerSlow: number | null = null;
+  private loadingTimerTimeout: number | null = null;
 
   private refreshConversationsAfterResponse = false;
 
@@ -630,6 +638,64 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
+  private handleConversationSystemAction(message: RioIncomingMessage) {
+    const action = (message.action ?? '').toLowerCase();
+    if (action === 'conversationrenamed') {
+      const data = message.data as Record<string, unknown>;
+      const id = this.extractString(data, ['conversationId', 'id']);
+      const newTitle = this.extractString(data, ['newTitle', 'title']);
+      if (id && newTitle) {
+        this.applyConversationRename(id, newTitle);
+        this.conversationHistoryError = '';
+      }
+      return true;
+    }
+
+    if (action === 'conversationdeleted') {
+      const data = message.data as Record<string, unknown>;
+      const id = this.extractString(data, ['conversationId', 'id']);
+      if (id) {
+        this.applyConversationDeletion(id);
+        this.conversationHistoryError = '';
+      }
+      return true;
+    }
+
+    if (action === 'processing') {
+      return true;
+    }
+
+    return false;
+  }
+
+  private shouldIgnoreAssistantPayload(action?: string) {
+    if (!action) {
+      return false;
+    }
+    const normalized = action.toLowerCase();
+    return (
+      normalized === 'processing' ||
+      normalized === 'conversationrenamed' ||
+      normalized === 'conversationdeleted'
+    );
+  }
+
+  private extractString(
+    data: Record<string, unknown> | undefined,
+    keys: string[],
+  ): string | null {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+    for (const key of keys) {
+      const value = data[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   handleHeaderActionClick(action: HeaderActionConfig, index: number) {
     const detail = {
       index,
@@ -945,6 +1011,14 @@ export class RioAssistWidget extends LitElement {
     if (this.isHistoryPayload(message)) {
       this.logHistoryPayload(message);
       this.handleHistoryPayload(message.data);
+      return;
+    }
+
+    if (this.handleConversationSystemAction(message)) {
+      return;
+    }
+
+    if (this.shouldIgnoreAssistantPayload(message.action)) {
       return;
     }
 
@@ -1452,16 +1526,36 @@ export class RioAssistWidget extends LitElement {
 
   private startLoadingGuard() {
     this.clearLoadingGuard();
-    this.loadingTimer = window.setTimeout(() => {
-      this.loadingTimer = null;
-      this.isLoading = false;
-    }, 15000);
+    this.loadingLabelInternal = 'RIO Insight está respondendo';
+
+    // Após 20s, mensagem de processamento prolongado.
+    this.loadingTimerSlow = window.setTimeout(() => {
+      this.loadingLabelInternal = 'RIO Insight continua respondendo';
+      this.requestUpdate();
+    }, 20000);
+
+    // Após 60s, aviso de demora maior.
+    this.loadingTimerTimeout = window.setTimeout(() => {
+      this.loadingLabelInternal =
+        'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
+      this.requestUpdate();
+    }, 60000);
   }
 
   private clearLoadingGuard() {
     if (this.loadingTimer !== null) {
       window.clearTimeout(this.loadingTimer);
       this.loadingTimer = null;
+    }
+
+    if (this.loadingTimerSlow !== null) {
+      window.clearTimeout(this.loadingTimerSlow);
+      this.loadingTimerSlow = null;
+    }
+
+    if (this.loadingTimerTimeout !== null) {
+      window.clearTimeout(this.loadingTimerTimeout);
+      this.loadingTimerTimeout = null;
     }
   }
 

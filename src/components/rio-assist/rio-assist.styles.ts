@@ -50,6 +50,21 @@ const baseStyles = css`
     color: #1f2f36;
   }
 
+  .dialog__input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #c7d0d9;
+    font: inherit;
+    outline: none;
+  }
+
+  .dialog__input:focus {
+    border-color: var(--accent-color, #008b9a);
+    box-shadow: 0 0 0 2px rgba(0, 139, 154, 0.2);
+  }
+
   .dialog__actions {
     display: flex;
     justify-content: flex-end;
@@ -73,7 +88,12 @@ const baseStyles = css`
   }
 
   .dialog__button--danger {
-    background: #008b9a;
+    background: #d9534f;
+    color: #fff;
+  }
+
+  .dialog__button--primary {
+    background: var(--accent-color, #008b9a);
     color: #fff;
   }
 `;

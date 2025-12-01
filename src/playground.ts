@@ -11,9 +11,15 @@ const boot = () => {
     rioToken,
     apiBaseUrl,
     suggestions: [
-      'Veículos com problemas',
-      'Valor das peças',
-      'Planos de manutenção',
+      'Resumo da Frota',
+      'Frota Disponível',
+      'Chamados Abertos',
+      'Parados + Causas',
+      'Aguardando Peças',
+      'Principais Gargalos',
+      'Tempo por Concessionária',
+      'Tempo de Ciclo',
+      'Preventiva x Corretiva',
     ],
   });
 };

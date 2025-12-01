@@ -237,6 +237,38 @@ export const miniPanelStyles = css`
     opacity: 0.75;
   }
 
+  .typing__dots {
+    display: inline-flex;
+    gap: 2px;
+    margin-left: 4px;
+  }
+
+  .typing__dots span {
+    display: inline-block;
+    animation: typing-bounce 1.2s infinite;
+  }
+
+  .typing__dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing__dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing-bounce {
+    0%,
+    80%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.25;
+    }
+    40% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+
   .message--user time {
     margin-top: 3px;
   }
@@ -252,7 +284,8 @@ export const miniPanelStyles = css`
   }
 
   .suggestions {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     justify-content: center;
   }

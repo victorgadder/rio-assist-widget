@@ -51,6 +51,29 @@ export class RioWebsocketClient {
     socket.send(JSON.stringify(payload));
   }
 
+  async renameConversation(conversationId: string, newTitle: string) {
+    const socket = await this.ensureConnection();
+    const payload = {
+      action: 'renameConversation',
+      conversationId,
+      newTitle,
+    };
+
+    console.info('[RioAssist][ws] enviando renameConversation', payload);
+    socket.send(JSON.stringify(payload));
+  }
+
+  async deleteConversation(conversationId: string) {
+    const socket = await this.ensureConnection();
+    const payload = {
+      action: 'deleteConversation',
+      conversationId,
+    };
+
+    console.info('[RioAssist][ws] enviando deleteConversation', payload);
+    socket.send(JSON.stringify(payload));
+  }
+
   onMessage(listener: (message: RioIncomingMessage) => void) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
