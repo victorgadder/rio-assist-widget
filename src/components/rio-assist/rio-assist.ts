@@ -31,6 +31,13 @@ type ConversationDeleteTarget = {
   index: number;
 };
 
+type ConversationRenameTarget = {
+  id: string;
+  title: string;
+  index: number;
+  draft: string;
+};
+
 export type HeaderActionConfig = {
   id?: string;
   iconUrl: string;
@@ -66,6 +73,7 @@ export class RioAssistWidget extends LitElement {
     activeConversationTitle: { state: true },
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
+    renameConversationTarget: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
   };
@@ -87,6 +95,8 @@ export class RioAssistWidget extends LitElement {
   rioToken = '';
 
   suggestionsSource = '';
+
+  private randomizedSuggestions: string[] = [];
 
   messages: ChatMessage[] = [];
 
@@ -117,6 +127,8 @@ export class RioAssistWidget extends LitElement {
   conversationHistoryError = '';
 
   deleteConversationTarget: ConversationDeleteTarget | null = null;
+
+  renameConversationTarget: ConversationRenameTarget | null = null;
 
   private refreshConversationsAfterResponse = false;
 
@@ -206,14 +218,43 @@ export class RioAssistWidget extends LitElement {
   conversations: ConversationItem[] = [];
 
   get suggestions(): string[] {
-    if (!this.suggestionsSource) {
+    return this.randomizedSuggestions;
+  }
+
+  private parseSuggestions(source: string): string[] {
+    if (!source) {
       return [];
     }
 
-    return this.suggestionsSource
+    return source
       .split('|')
       .map((item) => item.trim())
       .filter(Boolean);
+  }
+
+  private pickRandomSuggestions(options: string[], count: number): string[] {
+    if (options.length <= count) {
+      return [...options];
+    }
+
+    const pool = [...options];
+    for (let index = pool.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
+    }
+
+    return pool.slice(0, count);
+  }
+
+  protected willUpdate(changedProperties: PropertyValues): void {
+    super.willUpdate(changedProperties);
+
+    if (changedProperties.has('suggestionsSource')) {
+      this.randomizedSuggestions = this.pickRandomSuggestions(
+        this.parseSuggestions(this.suggestionsSource),
+        3,
+      );
+    }
   }
 
   protected updated(changedProperties: PropertyValues): void {
@@ -385,7 +426,12 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    this.dispatchConversationAction('rename', conversation, conversationIndex);
+    this.renameConversationTarget = {
+      id: conversation.id,
+      title: conversation.title,
+      index: conversationIndex,
+      draft: conversation.title,
+    };
   }
 
   handleHomeNavigation() {
@@ -452,24 +498,68 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
-  confirmDeleteConversation() {
+  async confirmDeleteConversation() {
     const target = this.deleteConversationTarget;
     if (!target) {
       return;
     }
 
-    this.dispatchConversationAction('delete', { id: target.id, title: target.title }, target.index);
-    this.deleteConversationTarget = null;
+    const success = await this.dispatchConversationAction(
+      'delete',
+      { id: target.id, title: target.title },
+      target.index,
+    );
+    if (success) {
+      this.deleteConversationTarget = null;
+    }
   }
 
   cancelDeleteConversation() {
     this.deleteConversationTarget = null;
   }
 
-  private dispatchConversationAction(
+  handleRenameDraft(event: InputEvent) {
+    if (!this.renameConversationTarget) {
+      return;
+    }
+
+    this.renameConversationTarget = {
+      ...this.renameConversationTarget,
+      draft: (event.target as HTMLInputElement).value,
+    };
+  }
+
+  async confirmRenameConversation() {
+    const target = this.renameConversationTarget;
+    if (!target) {
+      return;
+    }
+
+    const newTitle = target.draft.trim();
+    if (!newTitle) {
+      return;
+    }
+
+    const success = await this.dispatchConversationAction(
+      'rename',
+      { id: target.id, title: newTitle },
+      target.index,
+      newTitle,
+    );
+    if (success) {
+      this.renameConversationTarget = null;
+    }
+  }
+
+  cancelRenameConversation() {
+    this.renameConversationTarget = null;
+  }
+
+  private async dispatchConversationAction(
     action: 'rename' | 'delete',
     conversation: Pick<ConversationItem, 'id' | 'title'>,
     index: number,
+    newTitle?: string,
   ) {
     const eventName =
       action === 'rename' ? 'rioassist:conversation-rename' : 'rioassist:conversation-delete';
@@ -490,11 +580,53 @@ export class RioAssistWidget extends LitElement {
     );
 
     if (!allowed) {
-      return;
+      return false;
     }
 
     if (action === 'delete') {
-      this.applyConversationDeletion(conversation.id);
+      const ok = await this.syncConversationDeleteBackend(conversation.id);
+      return ok;
+    }
+
+    if (action === 'rename' && newTitle) {
+      const ok = await this.syncConversationRenameBackend(conversation.id, newTitle);
+      return ok;
+    }
+
+    return false;
+  }
+
+  private async syncConversationRenameBackend(conversationId: string, newTitle: string) {
+    try {
+      const client = this.ensureRioClient();
+      await client.renameConversation(conversationId, newTitle);
+      this.applyConversationRename(conversationId, newTitle);
+      this.conversationHistoryError = '';
+      return true;
+    } catch (error) {
+      console.error('[RioAssist][history] erro ao renomear conversa', error);
+      this.conversationHistoryError =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Nao foi possivel renomear a conversa.';
+      return false;
+    }
+  }
+
+  private async syncConversationDeleteBackend(conversationId: string) {
+    try {
+      const client = this.ensureRioClient();
+      await client.deleteConversation(conversationId);
+      this.applyConversationDeletion(conversationId);
+      this.conversationHistoryError = '';
+      return true;
+    } catch (error) {
+      console.error('[RioAssist][history] erro ao excluir conversa', error);
+      this.conversationHistoryError =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Nao foi possivel excluir a conversa.';
+      return false;
     }
   }
 
