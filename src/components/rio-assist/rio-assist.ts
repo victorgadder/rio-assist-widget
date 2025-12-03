@@ -38,6 +38,23 @@ type ConversationRenameTarget = {
   draft: string;
 };
 
+type ConversationActionKind = 'rename' | 'delete';
+
+type ConversationActionAttempt = {
+  action: ConversationActionKind;
+  conversationId: string;
+  originalTitle: string;
+  index: number;
+  newTitle?: string;
+  snapshot?: ConversationItem;
+  messagesSnapshot?: ChatMessage[];
+  wasActive?: boolean;
+};
+
+type ConversationActionErrorState = ConversationActionAttempt & {
+  message: string;
+};
+
 export type HeaderActionConfig = {
   id?: string;
   iconUrl: string;
@@ -74,6 +91,7 @@ export class RioAssistWidget extends LitElement {
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
     renameConversationTarget: { attribute: false },
+    conversationActionError: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
   };
@@ -134,6 +152,8 @@ export class RioAssistWidget extends LitElement {
 
   renameConversationTarget: ConversationRenameTarget | null = null;
 
+  conversationActionError: ConversationActionErrorState | null = null;
+
   private loadingLabelInternal = 'Rio Insight está respondendo...';
   private loadingTimerSlow: number | null = null;
   private loadingTimerTimeout: number | null = null;
@@ -145,6 +165,8 @@ export class RioAssistWidget extends LitElement {
   headerActions: HeaderActionConfig[] = [];
 
   homeUrl = '';
+
+  private pendingConversationAction: ConversationActionAttempt | null = null;
 
   private generateConversationId() {
     if (!this.conversationUserId) {
@@ -506,11 +528,45 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
+  private restoreConversationSnapshot(snapshot: ConversationItem | undefined, index: number) {
+    if (!snapshot) {
+      return;
+    }
+
+    const exists = this.conversations.some((conversation) => conversation.id === snapshot.id);
+    if (exists) {
+      return;
+    }
+
+    const next = [...this.conversations];
+    const position = index >= 0 && index <= next.length ? index : next.length;
+    next.splice(position, 0, snapshot);
+    this.conversations = next;
+  }
+
   async confirmDeleteConversation() {
     const target = this.deleteConversationTarget;
     if (!target) {
       return;
     }
+
+    const snapshot =
+      this.conversations[target.index] ??
+      this.conversations.find((item) => item.id === target.id) ?? {
+        id: target.id,
+        title: target.title,
+        updatedAt: new Date().toISOString(),
+      };
+    const isActive = this.currentConversationId === target.id;
+    this.pendingConversationAction = {
+      action: 'delete',
+      conversationId: target.id,
+      originalTitle: target.title,
+      index: target.index,
+      snapshot,
+      messagesSnapshot: isActive ? [...this.messages] : undefined,
+      wasActive: isActive,
+    };
 
     const success = await this.dispatchConversationAction(
       'delete',
@@ -519,7 +575,10 @@ export class RioAssistWidget extends LitElement {
     );
     if (success) {
       this.deleteConversationTarget = null;
+      return;
     }
+
+    this.pendingConversationAction = null;
   }
 
   cancelDeleteConversation() {
@@ -548,6 +607,14 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    this.pendingConversationAction = {
+      action: 'rename',
+      conversationId: target.id,
+      originalTitle: target.title,
+      index: target.index,
+      newTitle,
+    };
+
     const success = await this.dispatchConversationAction(
       'rename',
       { id: target.id, title: newTitle },
@@ -556,11 +623,65 @@ export class RioAssistWidget extends LitElement {
     );
     if (success) {
       this.renameConversationTarget = null;
+      return;
     }
+
+    this.pendingConversationAction = null;
   }
 
   cancelRenameConversation() {
     this.renameConversationTarget = null;
+  }
+
+  cancelConversationActionError() {
+    this.conversationActionError = null;
+    this.pendingConversationAction = null;
+  }
+
+  async retryConversationAction() {
+    const errorState = this.conversationActionError;
+    if (!errorState) {
+      return;
+    }
+
+    const indexFromState =
+      typeof errorState.index === 'number' ? errorState.index : this.conversations.findIndex(
+        (item) => item.id === errorState.conversationId,
+      );
+    const safeIndex =
+      indexFromState >= 0
+        ? indexFromState
+        : this.conversations.length > 0
+          ? this.conversations.length - 1
+          : 0;
+
+    const snapshot =
+      errorState.snapshot ??
+      this.conversations.find((item) => item.id === errorState.conversationId) ?? {
+        id: errorState.conversationId,
+        title: errorState.originalTitle,
+        updatedAt: new Date().toISOString(),
+      };
+
+    this.pendingConversationAction = {
+      action: errorState.action,
+      conversationId: errorState.conversationId,
+      originalTitle: errorState.originalTitle,
+      index: safeIndex,
+      newTitle: errorState.newTitle,
+      snapshot,
+      messagesSnapshot: errorState.messagesSnapshot,
+      wasActive: errorState.wasActive,
+    };
+
+    this.conversationActionError = null;
+
+    await this.dispatchConversationAction(
+      errorState.action,
+      { id: errorState.conversationId, title: errorState.newTitle ?? errorState.originalTitle },
+      safeIndex,
+      errorState.newTitle,
+    );
   }
 
   private async dispatchConversationAction(
@@ -647,6 +768,14 @@ export class RioAssistWidget extends LitElement {
       if (id && newTitle) {
         this.applyConversationRename(id, newTitle);
         this.conversationHistoryError = '';
+        if (
+          this.pendingConversationAction &&
+          this.pendingConversationAction.conversationId === id &&
+          this.pendingConversationAction.action === 'rename'
+        ) {
+          this.pendingConversationAction = null;
+          this.conversationActionError = null;
+        }
       }
       return true;
     }
@@ -657,6 +786,14 @@ export class RioAssistWidget extends LitElement {
       if (id) {
         this.applyConversationDeletion(id);
         this.conversationHistoryError = '';
+        if (
+          this.pendingConversationAction &&
+          this.pendingConversationAction.conversationId === id &&
+          this.pendingConversationAction.action === 'delete'
+        ) {
+          this.pendingConversationAction = null;
+          this.conversationActionError = null;
+        }
       }
       return true;
     }
@@ -666,6 +803,50 @@ export class RioAssistWidget extends LitElement {
     }
 
     return false;
+  }
+
+  private handleConversationActionError(message: RioIncomingMessage) {
+    const action = (message.action ?? '').toLowerCase();
+    if (action !== 'error') {
+      return false;
+    }
+
+    const data = message.data as Record<string, unknown>;
+    const errorText =
+      this.extractString(data, ['error', 'message', 'detail', 'description']) ||
+      (typeof message.text === 'string' && message.text.trim()
+        ? message.text
+        : 'O agente retornou um erro ao processar a conversa.');
+
+    const pending = this.pendingConversationAction;
+    if (pending) {
+      if (pending.action === 'rename') {
+        this.applyConversationRename(pending.conversationId, pending.originalTitle);
+      }
+
+      if (pending.action === 'delete') {
+        this.restoreConversationSnapshot(pending.snapshot, pending.index);
+        if (pending.wasActive) {
+          this.currentConversationId = pending.conversationId;
+          this.activeConversationTitle = pending.originalTitle;
+          this.messages = pending.messagesSnapshot ?? this.messages;
+        }
+      }
+
+      this.conversationActionError = {
+        ...pending,
+        message: errorText,
+      };
+      this.pendingConversationAction = null;
+      this.clearLoadingGuard();
+      this.isLoading = false;
+      return true;
+    }
+
+    this.errorMessage = errorText;
+    this.clearLoadingGuard();
+    this.isLoading = false;
+    return true;
   }
 
   private shouldIgnoreAssistantPayload(action?: string) {
@@ -1015,6 +1196,10 @@ export class RioAssistWidget extends LitElement {
     }
 
     if (this.handleConversationSystemAction(message)) {
+      return;
+    }
+
+    if (this.handleConversationActionError(message)) {
       return;
     }
 
@@ -1544,9 +1729,16 @@ export class RioAssistWidget extends LitElement {
     // Após 60s, aviso de demora maior.
     this.loadingTimerTimeout = window.setTimeout(() => {
       this.loadingLabelInternal =
-        'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
+        'RIO Insight ainda está processando sua resposta. Peço que aguarde um pouco mais';
       this.requestUpdate();
     }, 60000);
+
+    // Após 120s, novo aviso de demora maior.
+    this.loadingTimerTimeout = window.setTimeout(() => {
+      this.loadingLabelInternal =
+        'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
+      this.requestUpdate();
+    }, 120000);
   }
 
   private clearLoadingGuard() {

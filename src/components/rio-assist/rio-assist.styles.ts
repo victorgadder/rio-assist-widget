@@ -50,6 +50,15 @@ const baseStyles = css`
     color: #1f2f36;
   }
 
+  .dialog__message--title {
+    font-weight: 700;
+  }
+
+  .dialog__message--error {
+    color: #d9534f;
+    white-space: pre-wrap;
+  }
+
   .dialog__input {
     width: 100%;
     box-sizing: border-box;

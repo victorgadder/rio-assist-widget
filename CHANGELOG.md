@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.25] - 2025-12-02
+- Trata payloads com action error sem criar mensagem no chat e exibe modal explicando o erro ao renomear/excluir conversa.
+- Modal permite cancelar ou tentar novamente a acao, restaurando a conversa quando necessario.
+- Oculta opcao de Renomear no menu de conversa enquanto backend nao suporta.
+
+## [0.1.24] - 2025-12-01
+- Adiciona novo aviso de demora aos 120s em startLoadingGuard para respostas longas.
+- Padroniza o termo RIO em caixa alta nas mensagens de carregamento.
+
 ## [0.1.23] - 2025-11-28
 - Sugestoes de perguntas agora fazem wrap (flex-wrap) para quebrar linha quando nao houver espaco.
 

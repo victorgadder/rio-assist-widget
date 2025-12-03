@@ -64,6 +64,42 @@ export const renderRioAssist = (component: RioAssistWidget) => {
             </div>
           `
         : null}
+      ${component.conversationActionError
+        ? html`
+            <div class="dialog-overlay" role="dialog" aria-modal="true">
+              <div class="dialog">
+                <p class="dialog__message dialog__message--title">
+                  Erro ao
+                  ${component.conversationActionError.action === 'delete'
+                    ? 'excluir'
+                    : 'renomear'}
+                  conversa:
+                </p>
+                <p class="dialog__message">
+                  O agente retornou o seguinte erro ao tentar
+                  ${component.conversationActionError.action === 'delete' ? 'excluir' : 'renomear'}
+                  a conversa:
+                </p>
+                <p class="dialog__message dialog__message--error">
+                  ${component.conversationActionError.message}
+                </p>
+                <div class="dialog__actions">
+                  <button type="button" class="dialog__button dialog__button--ghost" @click=${() =>
+                    component.cancelConversationActionError()}>
+                    Cancelar ação
+                  </button>
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--primary"
+                    @click=${() => component.retryConversationAction()}
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              </div>
+            </div>
+          `
+        : null}
     </div>
   `;
 };
