@@ -5,6 +5,10 @@
 - Modal permite cancelar ou tentar novamente a acao, restaurando a conversa quando necessario.
 - Oculta opcao de Renomear no menu de conversa enquanto backend nao suporta.
 
+## [0.1.27] - 2025-12-02
+- Adiciona toggle "Ativar respostas curtas" (hero sem conversa e footer com conversa) que prefixa mensagens com "Quero uma resposta curta sobre:" ao enviar.
+- Ajusta padding responsivo do chat em fullscreen para evitar corte/colagem na barra de rolagem.
+
 ## [0.1.24] - 2025-12-01
 - Adiciona novo aviso de demora aos 120s em startLoadingGuard para respostas longas.
 - Padroniza o termo RIO em caixa alta nas mensagens de carregamento.

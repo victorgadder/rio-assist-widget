@@ -91,6 +91,7 @@ export class RioAssistWidget extends LitElement {
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
     renameConversationTarget: { attribute: false },
+    shortAnswerEnabled: { type: Boolean, state: true },
     conversationActionError: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
@@ -151,6 +152,8 @@ export class RioAssistWidget extends LitElement {
   deleteConversationTarget: ConversationDeleteTarget | null = null;
 
   renameConversationTarget: ConversationRenameTarget | null = null;
+
+  shortAnswerEnabled = false;
 
   conversationActionError: ConversationActionErrorState | null = null;
 
@@ -383,6 +386,10 @@ export class RioAssistWidget extends LitElement {
 
   toggleNewConversationShortcut() {
     this.showNewConversationShortcut = !this.showNewConversationShortcut;
+  }
+
+  toggleShortAnswers() {
+    this.shortAnswerEnabled = !this.shortAnswerEnabled;
   }
 
   handleConversationSelect(conversationId: string) {
@@ -1127,6 +1134,10 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    const contentToSend = this.shortAnswerEnabled
+      ? `Quero uma resposta curta sobre: ${content}`
+      : content;
+
     if (!this.currentConversationId) {
       this.currentConversationId = this.generateConversationId();
       this.activeConversationTitle = null;
@@ -1146,7 +1157,7 @@ export class RioAssistWidget extends LitElement {
       }),
     );
 
-    const userMessage = this.createMessage('user', content);
+    const userMessage = this.createMessage('user', contentToSend);
     this.messages = [...this.messages, userMessage];
     if (wasEmptyConversation) {
       this.showNewConversationShortcut = true;
@@ -1159,7 +1170,7 @@ export class RioAssistWidget extends LitElement {
 
     try {
       const client = this.ensureRioClient();
-      await client.sendMessage(content, this.currentConversationId);
+      await client.sendMessage(contentToSend, this.currentConversationId);
     } catch (error) {
       this.clearLoadingGuard();
       this.isLoading = false;

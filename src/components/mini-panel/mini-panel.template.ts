@@ -18,6 +18,24 @@ export const renderChatSurface = (component: RioAssistWidget) => {
     <div class="hero-card">
       <img src=${iaCentralIconUrl} alt="IA assistente" class="hero-card__icon" />
       <h3>Como posso te ajudar hoje?</h3>
+      <button
+        type="button"
+        class="short-answer-toggle short-answer-toggle--hero"
+        role="switch"
+        aria-checked=${component.shortAnswerEnabled}
+        @click=${() => component.toggleShortAnswers()}
+      >
+        <span
+          class=${classMap({
+            'short-answer-toggle__track': true,
+            'short-answer-toggle__track--on': component.shortAnswerEnabled,
+          })}
+          aria-hidden="true"
+        >
+          <span class="short-answer-toggle__thumb"></span>
+        </span>
+        <span class="short-answer-toggle__label">Ativar respostas curtas</span>
+      </button>
     </div>
   `;
 
@@ -73,6 +91,29 @@ export const renderChatSurface = (component: RioAssistWidget) => {
         : null}
 
       <div class="panel-footer">
+        ${hasMessages
+          ? html`
+              <button
+                type="button"
+                class="short-answer-toggle"
+                role="switch"
+                aria-checked=${component.shortAnswerEnabled}
+                @click=${() => component.toggleShortAnswers()}
+              >
+                <span
+                  class=${classMap({
+                    'short-answer-toggle__track': true,
+                    'short-answer-toggle__track--on': component.shortAnswerEnabled,
+                  })}
+                  aria-hidden="true"
+                >
+                  <span class="short-answer-toggle__thumb"></span>
+                </span>
+                <span class="short-answer-toggle__label">Ativar respostas curtas</span>
+              </button>
+            `
+          : null}
+
         ${component.suggestions.length > 0
           ? html`
               <div class="suggestions-wrapper">

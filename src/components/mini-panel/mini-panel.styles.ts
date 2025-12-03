@@ -316,6 +316,63 @@ export const miniPanelStyles = css`
     margin-bottom: 6px;
   }
 
+  .short-answer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #d6dde3;
+    background: #f7fafc;
+    color: #1f2f36;
+    border-radius: 999px;
+    padding: 8px 12px 8px 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .short-answer-toggle:focus-visible {
+    outline: 2px solid var(--accent-color, #008b9a);
+    outline-offset: 2px;
+  }
+
+  .short-answer-toggle__track {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: #c7d0d9;
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+
+  .short-answer-toggle__track--on {
+    background: #008b9a;
+  }
+
+  .short-answer-toggle__thumb {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease;
+  }
+
+  .short-answer-toggle__track--on .short-answer-toggle__thumb {
+    transform: translateX(18px);
+  }
+
+  .short-answer-toggle__label {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .short-answer-toggle--hero {
+    margin-top: 8px;
+  }
+
   .suggestions-label {
     text-align: center;
     font-size: 14px;

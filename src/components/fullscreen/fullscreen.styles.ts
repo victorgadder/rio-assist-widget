@@ -192,27 +192,37 @@ export const fullscreenStyles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 36px 32px 18px;
+    padding: 36px clamp(24px, 4vw, 56px) 18px;
     width: 100%;
     flex: 1;
     min-height: 0;
     overflow: hidden;
     max-width: 1400px;
     margin: 0 auto;
+    box-sizing: border-box;
   }
 
   .fullscreen-chat .panel-body {
     max-width: 920px;
     width: 100%;
-    padding: 12px 32px 12px;
+    padding: 12px clamp(20px, 3vw, 44px) 12px;
     margin: 0 auto;
+    box-sizing: border-box;
   }
 
   .fullscreen-chat .panel-footer {
     max-width: 640px;
+    width: 100%;
+    padding: 0 clamp(16px, 3vw, 32px);
+    box-sizing: border-box;
   }
 
   .fullscreen-chat form {
     max-width: none;
+  }
+
+  .fullscreen-chat .panel-content {
+    padding-right: clamp(12px, 2vw, 24px);
+    box-sizing: border-box;
   }
 `;
