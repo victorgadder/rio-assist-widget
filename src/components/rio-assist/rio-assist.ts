@@ -92,6 +92,7 @@ export class RioAssistWidget extends LitElement {
     deleteConversationTarget: { attribute: false },
     renameConversationTarget: { attribute: false },
     shortAnswerEnabled: { type: Boolean, state: true },
+    newConversationConfirmOpen: { type: Boolean, state: true },
     conversationActionError: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
@@ -153,7 +154,9 @@ export class RioAssistWidget extends LitElement {
 
   renameConversationTarget: ConversationRenameTarget | null = null;
 
-  shortAnswerEnabled = false;
+  shortAnswerEnabled = true;
+
+  newConversationConfirmOpen = false;
 
   conversationActionError: ConversationActionErrorState | null = null;
 
@@ -952,6 +955,29 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    this.newConversationConfirmOpen = true;
+  }
+
+  confirmCreateConversation() {
+    if (!this.hasActiveConversation) {
+      this.newConversationConfirmOpen = false;
+      return;
+    }
+
+    this.newConversationConfirmOpen = false;
+
+    this.startNewConversation();
+  }
+
+  cancelCreateConversation() {
+    this.newConversationConfirmOpen = false;
+  }
+
+  private startNewConversation() {
+    if (!this.hasActiveConversation) {
+      return;
+    }
+
     this.clearLoadingGuard();
     this.isLoading = false;
     this.messages = [];
@@ -1137,6 +1163,7 @@ export class RioAssistWidget extends LitElement {
     const contentToSend = this.shortAnswerEnabled
       ? `Quero uma resposta curta sobre: ${content}`
       : content;
+    const contentToDisplay = content;
 
     if (!this.currentConversationId) {
       this.currentConversationId = this.generateConversationId();
@@ -1157,7 +1184,7 @@ export class RioAssistWidget extends LitElement {
       }),
     );
 
-    const userMessage = this.createMessage('user', contentToSend);
+    const userMessage = this.createMessage('user', contentToDisplay);
     this.messages = [...this.messages, userMessage];
     if (wasEmptyConversation) {
       this.showNewConversationShortcut = true;

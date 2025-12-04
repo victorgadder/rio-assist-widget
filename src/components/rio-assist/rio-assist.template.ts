@@ -100,6 +100,37 @@ export const renderRioAssist = (component: RioAssistWidget) => {
             </div>
           `
         : null}
+      ${component.newConversationConfirmOpen
+        ? html`
+            <div class="dialog-overlay" role="dialog" aria-modal="true">
+              <div class="dialog">
+                <p class="dialog__message dialog__message--title">
+                  DESEJA MESMO INICIAR UMA NOVA CONVERSA?
+                </p>
+                <p class="dialog__message">
+                  Não se preocupe: a conversa atual continuará salva e você poderá acessá-la na
+                  listagem de conversas recentes.
+                </p>
+                <div class="dialog__actions">
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--ghost"
+                    @click=${() => component.cancelCreateConversation()}
+                  >
+                    CONTINUAR CONVERSA ATUAL
+                  </button>
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--primary"
+                    @click=${() => component.confirmCreateConversation()}
+                  >
+                    INICIAR NOVA CONVERSA
+                  </button>
+                </div>
+              </div>
+            </div>
+          `
+        : null}
     </div>
   `;
 };

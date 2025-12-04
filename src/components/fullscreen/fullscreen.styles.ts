@@ -161,7 +161,7 @@ export const fullscreenStyles = css`
 
   .fullscreen-exit-inline {
     position: absolute;
-    top: 56px;
+    top: 64px;
     right: 14px;
     width: 28px;
     height: 28px;
@@ -185,6 +185,16 @@ export const fullscreenStyles = css`
     grid-template-columns: 300px minmax(0, 1fr);
     min-height: 0;
     background: linear-gradient(180deg, #eef3f6 0%, #fff 100%);
+  }
+
+  .fullscreen-utility-bar {
+    position: absolute;
+    top: 60px;
+    right: 52px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2;
   }
 
   .fullscreen-chat {

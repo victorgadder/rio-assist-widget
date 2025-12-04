@@ -34,7 +34,10 @@ const baseStyles = css`
   }
 
   .dialog {
-    width: min(360px, calc(100% - 32px));
+    width: auto;
+    min-width: 360px;
+    max-width: calc(100% - 32px);
+    box-sizing: border-box;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
@@ -48,10 +51,12 @@ const baseStyles = css`
     margin: 0;
     font-size: 16px;
     color: #1f2f36;
+    text-align: center;
   }
 
   .dialog__message--title {
     font-weight: 700;
+    text-transform: uppercase;
   }
 
   .dialog__message--error {
@@ -76,17 +81,21 @@ const baseStyles = css`
 
   .dialog__actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 10px;
+    flex-wrap: nowrap;
+    align-items: center;
   }
 
   .dialog__button {
-    min-width: 96px;
+    min-width: max-content;
     height: 36px;
-    padding: 0 14px;
+    padding: 0 16px;
     border-radius: 8px;
     border: 1px solid transparent;
     font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
     transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
 
@@ -102,7 +111,7 @@ const baseStyles = css`
   }
 
   .dialog__button--primary {
-    background: var(--accent-color, #008b9a);
+    background: #008b9a;
     color: #fff;
   }
 `;

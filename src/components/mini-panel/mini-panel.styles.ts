@@ -81,7 +81,7 @@ export const miniPanelStyles = css`
 
   .panel-header__icons {
     display: inline-flex;
-    gap: 16px;
+    gap: 10px;
     align-items: center;
     padding-right: 12px;
   }
@@ -320,14 +320,14 @@ export const miniPanelStyles = css`
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    border: 1px solid #d6dde3;
-    background: #f7fafc;
+    border: none;
+    background: transparent;
     color: #1f2f36;
     border-radius: 999px;
     padding: 8px 12px 8px 10px;
     font-weight: 600;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    box-shadow: none;
+    transition: color 0.2s ease;
   }
 
   .short-answer-toggle:focus-visible {
@@ -369,8 +369,9 @@ export const miniPanelStyles = css`
     white-space: nowrap;
   }
 
-  .short-answer-toggle--hero {
-    margin-top: 8px;
+  .short-answer-toggle--header {
+    padding: 6px 10px 6px 8px;
+    font-size: 13px;
   }
 
   .suggestions-label {

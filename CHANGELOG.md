@@ -9,6 +9,24 @@
 - Adiciona toggle "Ativar respostas curtas" (hero sem conversa e footer com conversa) que prefixa mensagens com "Quero uma resposta curta sobre:" ao enviar.
 - Ajusta padding responsivo do chat em fullscreen para evitar corte/colagem na barra de rolagem.
 
+## [0.1.28] - 2025-12-02
+- Mantém prefixo "Quero uma resposta curta sobre:" apenas no payload enviado ao backend, sem exibir a frase na conversa do usuário.
+
+## [0.1.29] - 2025-12-02
+- Move o toggle de respostas curtas para o header (mini e fullscreen) com label "Respostas rápidas".
+- Botão de nova conversa (ícone "+") sempre visível com conversa ativa: no header do mini e no topo direito do fullscreen, iniciando nova conversa.
+- Remove toggle do hero/footer para liberar espaço.
+
+## [0.1.30] - 2025-12-02
+- Reposiciona o toggle no fullscreen para abaixo do header, ao lado esquerdo do botão de reduzir, sem fundo/borda.
+- Remove fundo/borda do toggle, deixando-o transparente.
+
+## [0.1.31] - 2025-12-02
+- Novo modal de confirmação ao iniciar nova conversa ("Deseja mesmo iniciar uma nova conversa?..."), com opções de continuar conversa atual ou iniciar nova.
+
+## [0.1.32] - 2025-12-02
+- Toggle "Respostas rápidas" passa a iniciar ativado por padrão.
+
 ## [0.1.24] - 2025-12-01
 - Adiciona novo aviso de demora aos 120s em startLoadingGuard para respostas longas.
 - Padroniza o termo RIO em caixa alta nas mensagens de carregamento.

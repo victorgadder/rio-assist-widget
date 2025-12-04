@@ -8,6 +8,7 @@ const homeIconUrl = new URL('../../assets/icons/homeIcon.png', import.meta.url).
 const checkFrameIconUrl = new URL('../../assets/icons/checkFrame.png', import.meta.url).href;
 const infoFrameIconUrl = new URL('../../assets/icons/infoFrame.png', import.meta.url).href;
 const profileFrameIconUrl = new URL('../../assets/icons/profileFrame.png', import.meta.url).href;
+const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
 const resizeScreenIconUrl = new URL('../../assets/icons/resizeScreen.png', import.meta.url).href;
 
 const defaultHeaderActions: HeaderActionConfig[] = [
@@ -111,6 +112,39 @@ export const renderFullscreen = (component: RioAssistWidget) => {
         >
           <img src=${resizeScreenIconUrl} alt="" aria-hidden="true" />
         </button>
+
+        <div class="fullscreen-utility-bar">
+          <button
+            type="button"
+            class="short-answer-toggle short-answer-toggle--header"
+            role="switch"
+            aria-checked=${component.shortAnswerEnabled}
+            @click=${() => component.toggleShortAnswers()}
+          >
+            <span
+              class=${classMap({
+                'short-answer-toggle__track': true,
+                'short-answer-toggle__track--on': component.shortAnswerEnabled,
+              })}
+              aria-hidden="true"
+            >
+              <span class="short-answer-toggle__thumb"></span>
+            </span>
+            <span class="short-answer-toggle__label">Respostas rápidas</span>
+          </button>
+          ${component.hasActiveConversation
+            ? html`
+                <button
+                  type="button"
+                  class="fullscreen-header__icon"
+                  aria-label="Iniciar nova conversa"
+                  @click=${() => component.handleCreateConversation()}
+                >
+                  <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
+                </button>
+              `
+            : null}
+        </div>
 
         <div class="fullscreen-grid">
           ${renderConversationsPanel(component, { variant: 'sidebar' })}
