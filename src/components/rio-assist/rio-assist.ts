@@ -174,17 +174,6 @@ export class RioAssistWidget extends LitElement {
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
-  private generateConversationId() {
-    if (!this.conversationUserId) {
-      this.conversationUserId = this.inferUserIdFromToken();
-    }
-
-    const userSegment = this.conversationUserId ?? 'user';
-    const id = `default-${userSegment}-${this.randomId(8)}`;
-    console.info('[RioAssist][conversation] gerando conversationId', id);
-    return id;
-  }
-
   private inferUserIdFromToken(): string | null {
     const token = this.rioToken.trim();
     if (!token || !token.includes('.')) {
@@ -203,13 +192,36 @@ export class RioAssistWidget extends LitElement {
         decoded?.username;
 
       if (candidate && typeof candidate === 'string') {
-        return candidate.replace(/[^a-zA-Z0-9_-]/g, '');
+        return candidate.replace(/[^a-zA-Z0-9_:-]/g, '');
       }
     } catch {
       return null;
     }
 
     return null;
+  }
+
+  private repairConversationId(rawId: string): string {
+    if (!rawId || rawId.includes(':')) {
+      return rawId;
+    }
+
+    const uuidMatch = rawId.match(
+      /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/,
+    );
+
+    if (!uuidMatch || uuidMatch.index === undefined) {
+      return rawId;
+    }
+
+    const uuid = uuidMatch[0];
+    const prefix = rawId.slice(0, uuidMatch.index).replace(/[-:]?$/, '');
+
+    if (!prefix) {
+      return rawId;
+    }
+
+    return `${prefix}:${uuid}`;
   }
 
   private randomId(length: number) {
@@ -738,6 +750,10 @@ export class RioAssistWidget extends LitElement {
   private async syncConversationRenameBackend(conversationId: string, newTitle: string) {
     try {
       const client = this.ensureRioClient();
+      console.info('[RioAssist][ws] enviando renameConversation', {
+        conversationId,
+        newTitle,
+      });
       await client.renameConversation(conversationId, newTitle);
       this.applyConversationRename(conversationId, newTitle);
       this.conversationHistoryError = '';
@@ -773,7 +789,9 @@ export class RioAssistWidget extends LitElement {
     const action = (message.action ?? '').toLowerCase();
     if (action === 'conversationrenamed') {
       const data = message.data as Record<string, unknown>;
-      const id = this.extractString(data, ['conversationId', 'id']);
+      const id = this.repairConversationId(
+        this.extractString(data, ['conversationId', 'id']) ?? '',
+      );
       const newTitle = this.extractString(data, ['newTitle', 'title']);
       if (id && newTitle) {
         this.applyConversationRename(id, newTitle);
@@ -792,7 +810,9 @@ export class RioAssistWidget extends LitElement {
 
     if (action === 'conversationdeleted') {
       const data = message.data as Record<string, unknown>;
-      const id = this.extractString(data, ['conversationId', 'id']);
+      const id = this.repairConversationId(
+        this.extractString(data, ['conversationId', 'id']) ?? '',
+      );
       if (id) {
         this.applyConversationDeletion(id);
         this.conversationHistoryError = '';
@@ -822,6 +842,11 @@ export class RioAssistWidget extends LitElement {
     }
 
     const data = message.data as Record<string, unknown>;
+    console.error('[RioAssist][ws] erro em acao de conversa recebido do backend', {
+      text: message.text,
+      data,
+      raw: message.raw,
+    });
     const errorText =
       this.extractString(data, ['error', 'message', 'detail', 'description']) ||
       (typeof message.text === 'string' && message.text.trim()
@@ -985,7 +1010,7 @@ export class RioAssistWidget extends LitElement {
     this.errorMessage = '';
     this.showConversations = false;
     this.teardownRioClient();
-    this.currentConversationId = this.generateConversationId();
+    this.currentConversationId = null;
     this.activeConversationTitle = null;
     this.showNewConversationShortcut = false;
     this.dispatchEvent(
@@ -1166,7 +1191,7 @@ export class RioAssistWidget extends LitElement {
     const contentToDisplay = content;
 
     if (!this.currentConversationId) {
-      this.currentConversationId = this.generateConversationId();
+      this.currentConversationId = null;
       this.activeConversationTitle = null;
     }
 
@@ -1243,6 +1268,12 @@ export class RioAssistWidget extends LitElement {
 
     if (this.shouldIgnoreAssistantPayload(message.action)) {
       return;
+    }
+
+    const incomingConversationId = this.extractConversationId(message.data);
+    if (incomingConversationId) {
+      this.currentConversationId = incomingConversationId;
+      this.syncActiveConversationTitle();
     }
 
     console.info('[RioAssist][ws] resposta de mensagem recebida', {
@@ -1380,6 +1411,20 @@ export class RioAssistWidget extends LitElement {
         index,
       );
 
+      const rawId =
+        (entry as Record<string, unknown>).conversationId ??
+        (entry as Record<string, unknown>).conversationUUID ??
+        (entry as Record<string, unknown>).conversationUuid ??
+        (entry as Record<string, unknown>).uuid ??
+        (entry as Record<string, unknown>).id;
+      if (rawId) {
+        console.info('[RioAssist][history] conversa recebida do backend', {
+          rawId,
+          normalizedId: normalized?.id ?? null,
+          entry,
+        });
+      }
+
       if (!normalized) {
         return;
       }
@@ -1492,7 +1537,7 @@ export class RioAssistWidget extends LitElement {
         }
 
         if (candidate !== undefined) {
-          return String(candidate);
+          return this.repairConversationId(String(candidate));
         }
       }
     }
@@ -1536,13 +1581,14 @@ export class RioAssistWidget extends LitElement {
     index: number,
   ): ConversationItem | null {
     const rawId =
-      value.id ??
       value.conversationId ??
       value.conversationUUID ??
       value.conversationUuid ??
-      value.uuid;
+      value.uuid ??
+      value.id;
 
-    const id = rawId !== undefined && rawId !== null ? String(rawId) : `history-${index + 1}`;
+    const idRaw = rawId !== undefined && rawId !== null ? String(rawId) : `history-${index + 1}`;
+    const id = this.repairConversationId(idRaw);
 
     const rawTitle =
       value.title ??
