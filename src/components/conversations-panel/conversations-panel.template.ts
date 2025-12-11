@@ -119,18 +119,14 @@ const renderConversationSurface = (
                       })}
                       @click=${(event: Event) => event.stopPropagation()}
                     >
-                      ${/* Renomear ocultado enquanto backend nao suporta */ false
-                        ? html`
-                            <button
-                              type="button"
-                              @click=${() =>
-                                component.handleConversationAction('rename', conversation.id)}
-                            >
-                              <img src=${editIconUrl} alt="" aria-hidden="true" />
-                              Renomear
-                            </button>
-                          `
-                        : null}
+                      <button
+                        type="button"
+                        @click=${() =>
+                          component.handleConversationAction('rename', conversation.id)}
+                      >
+                        <img src=${editIconUrl} alt="" aria-hidden="true" />
+                        Renomear
+                      </button>
                       <button
                         type="button"
                         @click=${() =>

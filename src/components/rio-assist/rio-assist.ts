@@ -216,12 +216,10 @@ export class RioAssistWidget extends LitElement {
 
     const uuid = uuidMatch[0];
     const prefix = rawId.slice(0, uuidMatch.index).replace(/[-:]?$/, '');
+    const suffix = rawId.slice(uuidMatch.index + uuid.length);
 
-    if (!prefix) {
-      return rawId;
-    }
-
-    return `${prefix}:${uuid}`;
+    const prefixPart = prefix ? `${prefix}:` : '';
+    return `${prefixPart}${uuid}${suffix}`;
   }
 
   private randomId(length: number) {
