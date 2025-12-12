@@ -20,6 +20,9 @@ export const floatingButtonStyles = css`
     letter-spacing: -0.2px;
     border-radius: 32px 0 0 32px;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
   }
 
   .floating-button img {
@@ -39,6 +42,10 @@ export const floatingButtonStyles = css`
 
   .floating-button:hover {
     box-shadow: 0 16px 28px rgba(0, 0, 0, 0.3);
+  }
+
+  .floating-button:active {
+    cursor: grabbing;
   }
 
   .canvas--fullscreen .floating-button {

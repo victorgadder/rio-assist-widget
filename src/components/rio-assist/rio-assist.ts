@@ -96,6 +96,7 @@ export class RioAssistWidget extends LitElement {
     conversationActionError: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
+    floatingButtonOffset: { type: Number, state: true },
   };
 
   open = false;
@@ -109,6 +110,8 @@ export class RioAssistWidget extends LitElement {
   placeholder = 'Pergunte alguma coisa';
 
   accentColor = '#008B9A';
+
+  floatingButtonOffset = 32;
 
   apiBaseUrl = '';
 
@@ -231,6 +234,10 @@ export class RioAssistWidget extends LitElement {
     return result;
   }
 
+  private clamp(value: number, min: number, max: number) {
+    return Math.min(Math.max(value, min), max);
+  }
+
   private conversationScrollbarRaf: number | null = null;
 
   private rioClient: RioWebsocketClient | null = null;
@@ -254,6 +261,17 @@ export class RioAssistWidget extends LitElement {
     thumbHeight: number;
     list: HTMLElement;
   } | null = null;
+
+  private floatingButtonDragState: {
+    pointerId: number;
+    startY: number;
+    startOffset: number;
+    buttonHeight: number;
+  } | null = null;
+
+  private floatingButtonDragged = false;
+
+  private suppressFloatingButtonClick = false;
 
   private markdownRenderer = new MarkdownIt({
     html: false,
@@ -353,6 +371,74 @@ export class RioAssistWidget extends LitElement {
 
   get hasActiveConversation() {
     return this.messages.length > 0;
+  }
+
+  handleFloatingButtonClick(event: Event) {
+    if (this.suppressFloatingButtonClick) {
+      event.preventDefault();
+      return;
+    }
+
+    this.togglePanel();
+  }
+
+  handleFloatingButtonPointerDown(event: PointerEvent) {
+    const target = event.currentTarget as HTMLElement;
+    target.setPointerCapture(event.pointerId);
+
+    this.floatingButtonDragState = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startOffset: this.floatingButtonOffset,
+      buttonHeight: target.getBoundingClientRect().height,
+    };
+
+    this.floatingButtonDragged = false;
+  }
+
+  handleFloatingButtonPointerMove(event: PointerEvent) {
+    if (!this.floatingButtonDragState || this.floatingButtonDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const { startY, startOffset, buttonHeight } = this.floatingButtonDragState;
+    const deltaY = event.clientY - startY;
+    const viewportHeight = window.innerHeight || this.getBoundingClientRect().height || 0;
+    const margin = 12;
+    const maxBottom = Math.max(margin, viewportHeight - buttonHeight - margin);
+
+    this.floatingButtonOffset = this.clamp(startOffset - deltaY, margin, maxBottom);
+    this.floatingButtonDragged = this.floatingButtonDragged || Math.abs(deltaY) > 3;
+    event.preventDefault();
+  }
+
+  handleFloatingButtonPointerUp(event: PointerEvent) {
+    this.finishFloatingButtonDrag(event);
+  }
+
+  handleFloatingButtonPointerCancel(event: PointerEvent) {
+    this.finishFloatingButtonDrag(event);
+  }
+
+  private finishFloatingButtonDrag(event: PointerEvent) {
+    if (!this.floatingButtonDragState || this.floatingButtonDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const target = event.currentTarget as HTMLElement | null;
+    if (target && target.hasPointerCapture(event.pointerId)) {
+      target.releasePointerCapture(event.pointerId);
+    }
+
+    if (this.floatingButtonDragged) {
+      this.suppressFloatingButtonClick = true;
+      window.setTimeout(() => {
+        this.suppressFloatingButtonClick = false;
+      }, 0);
+    }
+
+    this.floatingButtonDragState = null;
+    this.floatingButtonDragged = false;
   }
 
   togglePanel() {
