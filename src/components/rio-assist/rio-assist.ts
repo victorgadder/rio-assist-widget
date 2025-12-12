@@ -96,7 +96,7 @@ export class RioAssistWidget extends LitElement {
     conversationActionError: { attribute: false },
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
-    floatingButtonOffset: { type: Number, state: true },
+    floatingButtonOffset: { type: Number, attribute: 'data-floating-offset' },
   };
 
   open = false;
