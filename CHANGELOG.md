@@ -2,7 +2,6 @@
 
 ## [0.1.35] - 2025-12-11
 - Exibe altura inicial do botão flutuante configurável via atributo `data-floating-offset`, permitindo posicioná-lo mais alto por projeto (padrão permanece 32px).
-- Prepara pacote para publicação.
 
 ## [0.1.34] - 2025-12-11
 - Botão flutuante agora é arrastável verticalmente (mouse/touch), mantendo bottom dinâmico e respeitando limites da viewport.

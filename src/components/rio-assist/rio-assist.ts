@@ -103,9 +103,9 @@ export class RioAssistWidget extends LitElement {
 
   message = '';
 
-  titleText = 'Rio Insight';
+  titleText = 'RIO Insight';
 
-  buttonLabel = 'Rio Insight';
+  buttonLabel = 'RIO Insight';
 
   placeholder = 'Pergunte alguma coisa';
 

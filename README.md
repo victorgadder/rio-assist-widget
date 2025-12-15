@@ -20,8 +20,8 @@ Widget lateral do Rio Insight embalado como Web Component. Ao receber o token de
 <script>
   window.RioAssist.init({
     rioToken: '<TOKEN_RIO>',
-    title: 'Rio Insight',
-    buttonLabel: 'Rio Insight',
+    title: 'RIO Insight',
+    buttonLabel: 'RIO Insight',
     suggestions: [
       'Resumo da Frota',
       'Frota Disponível',

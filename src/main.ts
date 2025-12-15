@@ -9,6 +9,7 @@ export type RioAssistOptions = {
   accentColor?: string;
   apiBaseUrl?: string;
   rioToken?: string;
+  floatingOffset?: number;
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
@@ -29,6 +30,7 @@ const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   accentColor: '#008B9A',
   apiBaseUrl: '',
   rioToken: '',
+  floatingOffset: 32,
 };
 
 const widgetTagName = 'rio-assist-widget';
@@ -46,7 +48,17 @@ function ensureElement(options: RioAssistOptions = {}) {
     target.appendChild(widget);
   }
 
-  const mergedOptions = { ...DEFAULT_OPTIONS, ...rest };
+  const topMargin = 96;
+  const buttonHeight = 64;
+  const viewport =
+    typeof window !== 'undefined'
+      ? window.innerHeight || document.documentElement.clientHeight || 0
+      : 0;
+  const computedFloatingOffset =
+    rest.floatingOffset ??
+    (viewport ? Math.max(12, viewport - topMargin - buttonHeight) : DEFAULT_OPTIONS.floatingOffset);
+
+  const mergedOptions = { ...DEFAULT_OPTIONS, ...rest, floatingOffset: computedFloatingOffset };
 
   Object.entries(mergedOptions).forEach(([key, value]) => {
     if (value === undefined) {
@@ -74,7 +86,6 @@ if (typeof window !== 'undefined') {
   };
   window.dispatchEvent(new Event('rio-assist-ready'));
 }
-
 
 
 

@@ -34,5 +34,25 @@
 
     <script type="module" src="/src/main.ts"></script>
     <script type="module" src="/src/playground.ts"></script>
+    <script>
+      // Posiciona o botao flutuante proximo ao topo da viewport calculando bottom a partir da altura disponivel.
+      (function () {
+        const widget = document.querySelector('rio-assist-widget');
+        if (!widget) return;
+
+        const TOP_MARGIN = 96; // distancia desejada a partir do topo em px
+        const BUTTON_HEIGHT = 64;
+        const MIN_BOTTOM = 12;
+
+        const updateFloatingOffset = () => {
+          const viewport = window.innerHeight || document.documentElement.clientHeight || 0;
+          const bottom = Math.max(MIN_BOTTOM, viewport - TOP_MARGIN - BUTTON_HEIGHT);
+          widget.setAttribute('data-floating-offset', String(bottom));
+        };
+
+        updateFloatingOffset();
+        window.addEventListener('resize', updateFloatingOffset);
+      })();
+    </script>
   </body>
 </html>
