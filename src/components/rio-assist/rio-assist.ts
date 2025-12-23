@@ -4,6 +4,7 @@ import { renderRioAssist } from './rio-assist.template';
 import {
   RioWebsocketClient,
   type RioIncomingMessage,
+  type RioConnectionStatus,
 } from '../../services/rioWebsocket';
 import MarkdownIt from 'markdown-it';
 import markdownItTaskLists from 'markdown-it-task-lists';
@@ -97,6 +98,7 @@ export class RioAssistWidget extends LitElement {
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
     floatingButtonOffset: { type: Number, attribute: 'data-floating-offset' },
+    connectionStatus: { state: true },
   };
 
   open = false;
@@ -165,7 +167,8 @@ export class RioAssistWidget extends LitElement {
 
   private loadingLabelInternal = 'Rio Insight está respondendo...';
   private loadingTimerSlow: number | null = null;
-  private loadingTimerTimeout: number | null = null;
+  private loadingTimerTimeout60: number | null = null;
+  private loadingTimerTimeout120: number | null = null;
 
   private refreshConversationsAfterResponse = false;
 
@@ -174,6 +177,8 @@ export class RioAssistWidget extends LitElement {
   headerActions: HeaderActionConfig[] = [];
 
   homeUrl = '';
+
+  connectionStatus: import('../../services/rioWebsocket').RioConnectionStatus = 'idle';
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
@@ -244,7 +249,7 @@ export class RioAssistWidget extends LitElement {
 
   private rioUnsubscribe: (() => void) | null = null;
 
-  private loadingTimer: number | null = null;
+  private rioStatusUnsubscribe: (() => void) | null = null;
 
   private currentConversationId: string | null = null;
 
@@ -279,10 +284,70 @@ export class RioAssistWidget extends LitElement {
     breaks: true,
   }).use(markdownItTaskLists);
 
+  private pendingResendMessage:
+    | {
+        content: string;
+        conversationId: string | null;
+      }
+    | null = null;
+
+  private removeNetworkListeners: Array<() => void> = [];
+
   conversations: ConversationItem[] = [];
 
   get suggestions(): string[] {
     return this.randomizedSuggestions;
+  }
+
+  get isSendBlocked() {
+    return ['connecting', 'reconnecting', 'error', 'closed'].includes(this.connectionStatus);
+  }
+
+  get connectionStatusLabel() {
+    switch (this.connectionStatus) {
+      case 'reconnecting':
+        return 'Reconectando...';
+      case 'error':
+        return 'Conexão com o agente indisponível';
+      case 'closed':
+        return 'Conexão encerrada';
+      default:
+        return '';
+    }
+  }
+
+  private setupNetworkListeners() {
+    const handleOffline = () => {
+      this.handleConnectionStatusChange('error');
+      this.teardownRioClient('error');
+    };
+
+    const handleOnline = () => {
+      if (this.connectionStatus !== 'open') {
+        this.connectionStatus = 'connecting';
+        this.warmupConnection();
+      }
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    this.removeNetworkListeners.push(
+      () => window.removeEventListener('offline', handleOffline),
+      () => window.removeEventListener('online', handleOnline),
+    );
+  }
+
+  private async warmupConnection() {
+    try {
+      const client = this.ensureRioClient();
+      await client.requestHistory({ limit: 1 });
+    } catch (error) {
+      this.handleConnectionStatusChange('error');
+      this.errorMessage = error instanceof Error && error.message
+        ? error.message
+        : 'Nao foi possivel reestabelecer a conexão com o agente.';
+    }
   }
 
   private parseSuggestions(source: string): string[] {
@@ -345,6 +410,7 @@ export class RioAssistWidget extends LitElement {
 
   protected firstUpdated(): void {
     this.enqueueConversationScrollbarMeasure();
+    this.setupNetworkListeners();
   }
 
   disconnectedCallback(): void {
@@ -356,6 +422,9 @@ export class RioAssistWidget extends LitElement {
 
     this.teardownRioClient();
     this.clearLoadingGuard();
+
+    this.removeNetworkListeners.forEach((remove) => remove());
+    this.removeNetworkListeners = [];
   }
 
   get filteredConversations() {
@@ -1269,6 +1338,11 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    if (this.isSendBlocked) {
+      this.errorMessage = this.connectionStatusLabel || 'Aguarde a conexão retornar.';
+      return;
+    }
+
     const contentToSend = this.shortAnswerEnabled
       ? `Quero uma resposta curta sobre: ${content}`
       : content;
@@ -1295,6 +1369,10 @@ export class RioAssistWidget extends LitElement {
 
     const userMessage = this.createMessage('user', contentToDisplay);
     this.messages = [...this.messages, userMessage];
+    this.pendingResendMessage = {
+      content: contentToSend,
+      conversationId: this.currentConversationId,
+    };
     if (wasEmptyConversation) {
       this.showNewConversationShortcut = true;
       this.refreshConversationsAfterResponse = true;
@@ -1327,8 +1405,12 @@ export class RioAssistWidget extends LitElement {
     if (!this.rioClient || !this.rioClient.matchesToken(token)) {
       this.teardownRioClient();
       this.rioClient = new RioWebsocketClient(token);
+      this.connectionStatus = 'connecting';
       this.rioUnsubscribe = this.rioClient.onMessage((incoming) => {
         this.handleIncomingMessage(incoming);
+      });
+      this.rioStatusUnsubscribe = this.rioClient.onStatus((status) => {
+        this.handleConnectionStatusChange(status);
       });
     }
 
@@ -1376,6 +1458,8 @@ export class RioAssistWidget extends LitElement {
 
     const assistantMessage = this.createMessage('assistant', message.text);
     this.messages = [...this.messages, assistantMessage];
+    this.pendingResendMessage = null;
+    this.errorMessage = '';
     this.clearLoadingGuard();
     this.isLoading = false;
 
@@ -1385,15 +1469,63 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
-  private teardownRioClient() {
+  private handleConnectionStatusChange(status: import('../../services/rioWebsocket').RioConnectionStatus) {
+    this.connectionStatus = status;
+
+    // Se estivermos esperando resposta e a conexão caiu, limpa o loading e informa o usuário.
+    if (status === 'error' || status === 'closed') {
+      this.clearLoadingGuard();
+      if (this.isLoading) {
+        this.isLoading = false;
+        this.errorMessage = 'Conexão com o agente perdida. Aguarde reconectar ou envie novamente.';
+      }
+      return;
+    }
+
+    if (status === 'open') {
+      this.errorMessage = '';
+      this.attemptPendingResend();
+    }
+  }
+
+  private attemptPendingResend() {
+    if (!this.pendingResendMessage || this.isLoading || this.connectionStatus !== 'open') {
+      return;
+    }
+
+    this.isLoading = true;
+    this.startLoadingGuard();
+
+    const { content, conversationId } = this.pendingResendMessage;
+    this.ensureRioClient()
+      .sendMessage(content, conversationId)
+      .catch((error) => {
+        this.clearLoadingGuard();
+        this.isLoading = false;
+        this.errorMessage = error instanceof Error
+          ? error.message
+          : 'Nao foi possivel enviar a mensagem para o agente.';
+      });
+  }
+
+  private teardownRioClient(nextStatus: import('../../services/rioWebsocket').RioConnectionStatus | null = 'idle') {
     if (this.rioUnsubscribe) {
       this.rioUnsubscribe();
       this.rioUnsubscribe = null;
     }
 
+    if (this.rioStatusUnsubscribe) {
+      this.rioStatusUnsubscribe();
+      this.rioStatusUnsubscribe = null;
+    }
+
     if (this.rioClient) {
       this.rioClient.close();
       this.rioClient = null;
+    }
+
+    if (nextStatus !== null) {
+      this.connectionStatus = nextStatus;
     }
   }
 
@@ -1895,14 +2027,14 @@ export class RioAssistWidget extends LitElement {
     }, 20000);
 
     // Após 60s, aviso de demora maior.
-    this.loadingTimerTimeout = window.setTimeout(() => {
+    this.loadingTimerTimeout60 = window.setTimeout(() => {
       this.loadingLabelInternal =
         'RIO Insight ainda está processando sua resposta. Peço que aguarde um pouco mais';
       this.requestUpdate();
     }, 60000);
 
     // Após 120s, novo aviso de demora maior.
-    this.loadingTimerTimeout = window.setTimeout(() => {
+    this.loadingTimerTimeout120 = window.setTimeout(() => {
       this.loadingLabelInternal =
         'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
       this.requestUpdate();
@@ -1910,19 +2042,19 @@ export class RioAssistWidget extends LitElement {
   }
 
   private clearLoadingGuard() {
-    if (this.loadingTimer !== null) {
-      window.clearTimeout(this.loadingTimer);
-      this.loadingTimer = null;
-    }
-
     if (this.loadingTimerSlow !== null) {
       window.clearTimeout(this.loadingTimerSlow);
       this.loadingTimerSlow = null;
     }
 
-    if (this.loadingTimerTimeout !== null) {
-      window.clearTimeout(this.loadingTimerTimeout);
-      this.loadingTimerTimeout = null;
+    if (this.loadingTimerTimeout60 !== null) {
+      window.clearTimeout(this.loadingTimerTimeout60);
+      this.loadingTimerTimeout60 = null;
+    }
+
+    if (this.loadingTimerTimeout120 !== null) {
+      window.clearTimeout(this.loadingTimerTimeout120);
+      this.loadingTimerTimeout120 = null;
     }
   }
 

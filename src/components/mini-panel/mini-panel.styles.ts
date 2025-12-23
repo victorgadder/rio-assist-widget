@@ -474,6 +474,17 @@ export const miniPanelStyles = css`
     text-align: center;
   }
 
+  .connection-banner {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #f3f7fb;
+    color: #1f2f36;
+    font-size: 13px;
+    text-align: center;
+    border: 1px solid #d6e2e6;
+  }
+
   .close-button {
     background: transparent;
     border: none;

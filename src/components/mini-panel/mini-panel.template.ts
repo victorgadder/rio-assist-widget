@@ -71,6 +71,9 @@ export const renderChatSurface = (component: RioAssistWidget) => {
       ${component.errorMessage
         ? html`<p class="error-banner">${component.errorMessage}</p>`
         : null}
+      ${component.isSendBlocked && component.connectionStatusLabel
+        ? html`<p class="connection-banner">${component.connectionStatusLabel}</p>`
+        : null}
 
       <div class="panel-footer">
         ${component.suggestions.length > 0
@@ -105,13 +108,13 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             @input=${(event: InputEvent) => {
               component.message = (event.target as HTMLInputElement).value;
             }}
-            ?disabled=${component.isLoading}
+            ?disabled=${component.isLoading || component.isSendBlocked}
           />
           <button
             class="input-button submit-button"
             type="submit"
             aria-label="Enviar mensagem"
-            ?disabled=${component.isLoading}
+            ?disabled=${component.isLoading || component.isSendBlocked}
           >
             <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
           </button>

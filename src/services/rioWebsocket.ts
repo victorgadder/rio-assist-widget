@@ -8,6 +8,14 @@ export type RioIncomingMessage = {
   action?: string;
 };
 
+export type RioConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'open'
+  | 'reconnecting'
+  | 'closed'
+  | 'error';
+
 export class RioWebsocketClient {
   readonly token: string;
 
@@ -17,7 +25,15 @@ export class RioWebsocketClient {
 
   private readonly listeners = new Set<(message: RioIncomingMessage) => void>();
 
+  private readonly statusListeners = new Set<(status: RioConnectionStatus) => void>();
+
   private heartbeatId: number | null = null;
+
+  private reconnectAttempts = 0;
+
+  private reconnectTimer: number | null = null;
+
+  private closedByClient = false;
 
   constructor(token: string) {
     this.token = token;
@@ -79,7 +95,14 @@ export class RioWebsocketClient {
     return () => this.listeners.delete(listener);
   }
 
+  onStatus(listener: (status: RioConnectionStatus) => void) {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
+
   close() {
+    this.closedByClient = true;
+    this.clearReconnectTimer();
     this.stopHeartbeat();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.close();
@@ -88,6 +111,8 @@ export class RioWebsocketClient {
     this.connectPromise = null;
     this.socket = null;
     this.listeners.clear();
+    this.emitStatus('closed');
+    this.statusListeners.clear();
   }
 
   private async ensureConnection(): Promise<WebSocket> {
@@ -100,16 +125,15 @@ export class RioWebsocketClient {
       return this.socket;
     }
 
+    this.closedByClient = false;
+    this.emitStatus(this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
+
     this.socket = new WebSocket(
       `${WEBSOCKET_URL}?token=${encodeURIComponent(this.token)}`,
     );
 
     this.socket.addEventListener('message', (event) => this.handleMessage(event));
-    this.socket.addEventListener('close', () => {
-      this.connectPromise = null;
-      this.socket = null;
-      this.stopHeartbeat();
-    });
+    this.socket.addEventListener('close', (event) => this.handleClose(event));
 
     this.connectPromise = new Promise((resolve, reject) => {
       if (!this.socket) {
@@ -122,11 +146,14 @@ export class RioWebsocketClient {
         if (this.socket) {
           this.startHeartbeat(this.socket);
         }
+        this.reconnectAttempts = 0;
+        this.emitStatus('open');
         resolve();
       };
 
       const handleError = () => {
         cleanup();
+        this.emitStatus('error');
         this.stopHeartbeat();
         this.socket?.close();
         this.socket = null;
@@ -166,6 +193,7 @@ export class RioWebsocketClient {
   }
 
   private stopHeartbeat() {
+    this.clearReconnectTimer();
     if (this.heartbeatId !== null) {
       window.clearInterval(this.heartbeatId);
       this.heartbeatId = null;
@@ -203,6 +231,56 @@ export class RioWebsocketClient {
     }
 
     this.listeners.forEach((listener) => listener({ text, raw, data: parsed, action }));
+  }
+
+  private handleClose(_event: CloseEvent) {
+    this.connectPromise = null;
+    this.socket = null;
+    this.stopHeartbeat();
+
+    if (this.closedByClient) {
+      this.emitStatus('closed');
+      return;
+    }
+
+    this.emitStatus('closed');
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimer !== null || this.closedByClient) {
+      return;
+    }
+
+    const attempt = this.reconnectAttempts;
+    const delay = Math.min(30000, 1000 * 2 ** attempt);
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = window.setTimeout(async () => {
+      this.reconnectTimer = null;
+      if (this.closedByClient) {
+        return;
+      }
+
+      this.emitStatus('reconnecting');
+      try {
+        await this.ensureConnection();
+      } catch (error) {
+        console.error('[RioAssist][ws] falha ao reconectar', error);
+        this.emitStatus('error');
+        this.scheduleReconnect();
+      }
+    }, delay);
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimer !== null) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private emitStatus(status: RioConnectionStatus) {
+    this.statusListeners.forEach((listener) => listener(status));
   }
 
   private async readMessage(
