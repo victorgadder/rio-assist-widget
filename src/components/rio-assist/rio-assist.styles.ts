@@ -5,7 +5,7 @@ import { fullscreenStyles } from '../fullscreen/fullscreen.styles';
 import { conversationsPanelStyles } from '../conversations-panel/conversations-panel.styles';
 
 const baseStyles = css`
-  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
 
   :host {
     position: fixed;

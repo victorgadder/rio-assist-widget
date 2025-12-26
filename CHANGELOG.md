@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.36] - 2025-12-19
+- Adiciona modo Agente Consultor com botão "Fale com um consultor" no hero do chat, exibindo introdução e lista de assuntos pré-definidos (mockados e prontos para backend).
+- Ao selecionar um assunto, registra a escolha como mensagem do usuário e mostra resposta guiada com texto "Certo! Reuni abaixo..." e botões de dúvidas específicas por tópico; follow-ups enviam a pergunta ao agente.
+- Oculta as sugestões genéricas ao entrar no modo consultor, mantendo a possibilidade de perguntas livres pelo input normal.
+- Ajusta layout dos botões consultor/follow-up para quebrar linha dentro do container, com padding 8px/16px e altura auto, preservando o visual do protótipo.
+
 ## [0.1.35] - 2025-12-11
 - Exibe altura inicial do botão flutuante configurável via atributo `data-floating-offset`, permitindo posicioná-lo mais alto por projeto (padrão permanece 32px).
 

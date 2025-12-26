@@ -3,6 +3,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
+import { renderConsultantAgentHero } from '../../consultant-agent/consultant-agent.template';
 
 const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', import.meta.url).href;
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
@@ -11,20 +12,85 @@ const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png',
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
 
+const renderConsultantFollowUp = (
+  component: RioAssistWidget,
+  payload: {
+    id: string;
+    topicLabel: string;
+    questions: string[];
+  },
+) => {
+  const buttonsVisible = component.activeConsultantFollowUpId === payload.id;
+
+  return html`
+    <div class="consultant-follow-up">
+      <p class="consultant-follow-up__text">
+        Certo! Reuni abaixo as principais dúvidas sobre ${payload.topicLabel}. Escolha uma delas ou
+        faça sua pergunta.
+      </p>
+      ${buttonsVisible
+        ? html`
+            <div class="consultant-follow-up__options">
+              ${payload.questions.map(
+                (question) => html`
+                  <button
+                    class="consultant-agent__option"
+                    type="button"
+                    @click=${() => component.handleConsultantFollowUpQuestion(question)}
+                  >
+                    ${question}
+                  </button>
+                `,
+              )}
+            </div>
+          `
+        : null}
+    </div>
+  `;
+};
+
 export const renderChatSurface = (component: RioAssistWidget) => {
   const hasMessages = component.messages.length > 0;
+  const showConsultantPrompt =
+    component.consultantAgentVisible &&
+    component.consultantAgentOptions.length > 0 &&
+    !hasMessages;
 
   const heroCard = html`
     <div class="hero-card">
       <img src=${iaCentralIconUrl} alt="IA assistente" class="hero-card__icon" />
       <h3>Como posso te ajudar hoje?</h3>
+      ${renderConsultantAgentHero(component)}
+    </div>
+  `;
+
+  const consultantPrompt = html`
+    <div class="consultant-prompt">
+      <div class="consultant-prompt__text">
+        ${component.consultantAgentIntro}
+      </div>
+      <div class="consultant-prompt__options">
+        ${component.consultantAgentOptions.map(
+          (option) => html`
+            <button
+              class="consultant-agent__option"
+              type="button"
+              @click=${() => component.handleConsultantAgentOption(option)}
+            >
+              ${option.label}
+            </button>
+          `,
+        )}
+      </div>
     </div>
   `;
 
   const conversation = html`
     <div class="conversation">
-      ${component.messages.map(
-        (message) => html`
+      ${component.messages.map((message) => {
+        const hasFollowUp = Boolean((message as any).consultantFollowUp);
+
+        return html`
           <div
             class=${classMap({
               message: true,
@@ -33,7 +99,9 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             })}
           >
             <div class="message__content">
-              ${unsafeHTML(message.html ?? message.text)}
+              ${hasFollowUp
+                ? renderConsultantFollowUp(component, (message as any).consultantFollowUp)
+                : unsafeHTML(message.html ?? message.text)}
             </div>
             <time>
               ${new Date(message.timestamp).toLocaleTimeString('pt-BR', {
@@ -42,8 +110,8 @@ export const renderChatSurface = (component: RioAssistWidget) => {
               })}
             </time>
           </div>
-        `,
-      )}
+        `;
+      })}
       ${component.isLoading
         ? html`
             <div class="message message--assistant typing">
@@ -60,12 +128,13 @@ export const renderChatSurface = (component: RioAssistWidget) => {
   return html`
     <div class="panel-body">
       <div
-        class=${classMap({
-          'panel-content': true,
-          'panel-content--empty': !hasMessages,
-        })}
+      class=${classMap({
+        'panel-content': true,
+        'panel-content--empty': !hasMessages && !showConsultantPrompt,
+        'panel-content--consultant': showConsultantPrompt,
+      })}
       >
-        ${hasMessages ? conversation : heroCard}
+        ${hasMessages ? conversation : showConsultantPrompt ? consultantPrompt : heroCard}
       </div>
 
       ${component.errorMessage
@@ -73,7 +142,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
         : null}
 
       <div class="panel-footer">
-        ${component.suggestions.length > 0
+        ${component.showSuggestions && component.suggestions.length > 0
           ? html`
               <div class="suggestions-wrapper">
                 <p class="suggestions-label">Sugestões de Perguntas</p>

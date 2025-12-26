@@ -8,6 +8,13 @@ import {
 import MarkdownIt from 'markdown-it';
 import markdownItTaskLists from 'markdown-it-task-lists';
 import DOMPurify from 'dompurify';
+import {
+  CONSULTANT_AGENT_INTRO,
+  type ConsultantAgentOption,
+  buildConsultantFollowUpText,
+  getConsultantFollowUp,
+  loadConsultantAgentOptions,
+} from '../../consultant-agent/consultant-agent';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -17,6 +24,12 @@ export type ChatMessage = {
   text: string;
   html?: string;
   timestamp: number;
+  consultantFollowUp?: {
+    id: string;
+    topicId: string;
+    topicLabel: string;
+    questions: string[];
+  };
 };
 
 type ConversationItem = {
@@ -82,11 +95,11 @@ export class RioAssistWidget extends LitElement {
     conversationSearch: { type: String, state: true },
     conversationMenuId: { state: true },
     conversationMenuPlacement: { state: true },
-    isFullscreen: { type: Boolean, state: true },
-    conversationScrollbar: { state: true },
-    showNewConversationShortcut: { type: Boolean, state: true },
-    conversations: { state: true },
-    conversationHistoryLoading: { type: Boolean, state: true },
+  isFullscreen: { type: Boolean, state: true },
+  conversationScrollbar: { state: true },
+  showNewConversationShortcut: { type: Boolean, state: true },
+  conversations: { state: true },
+  conversationHistoryLoading: { type: Boolean, state: true },
     activeConversationTitle: { state: true },
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
@@ -97,7 +110,12 @@ export class RioAssistWidget extends LitElement {
     headerActions: { attribute: false },
     homeUrl: { type: String, attribute: 'data-home-url' },
     floatingButtonOffset: { type: Number, attribute: 'data-floating-offset' },
-  };
+  consultantAgentVisible: { type: Boolean, state: true },
+  consultantAgentIntro: { type: String, state: true },
+  consultantAgentOptions: { attribute: false, state: true },
+  showSuggestions: { type: Boolean, state: true },
+  activeConsultantFollowUpId: { type: String, state: true },
+};
 
   open = false;
 
@@ -174,6 +192,16 @@ export class RioAssistWidget extends LitElement {
   headerActions: HeaderActionConfig[] = [];
 
   homeUrl = '';
+
+  consultantAgentVisible = false;
+
+  consultantAgentIntro = CONSULTANT_AGENT_INTRO;
+
+  consultantAgentOptions: ConsultantAgentOption[] = [];
+
+  showSuggestions = true;
+
+  activeConsultantFollowUpId: string | null = null;
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
@@ -345,6 +373,7 @@ export class RioAssistWidget extends LitElement {
 
   protected firstUpdated(): void {
     this.enqueueConversationScrollbarMeasure();
+    void this.bootstrapConsultantAgent();
   }
 
   disconnectedCallback(): void {
@@ -356,6 +385,18 @@ export class RioAssistWidget extends LitElement {
 
     this.teardownRioClient();
     this.clearLoadingGuard();
+  }
+
+  private async bootstrapConsultantAgent() {
+    try {
+      this.consultantAgentOptions = await loadConsultantAgentOptions();
+    } catch (error) {
+      console.error(
+        '[RioAssist][consultant] erro ao carregar opções do agente consultor',
+        error,
+      );
+      this.consultantAgentOptions = [];
+    }
   }
 
   get filteredConversations() {
@@ -489,6 +530,50 @@ export class RioAssistWidget extends LitElement {
 
   toggleShortAnswers() {
     this.shortAnswerEnabled = !this.shortAnswerEnabled;
+  }
+
+  handleConsultantAgentOpen() {
+    if (!this.consultantAgentVisible) {
+      this.consultantAgentVisible = true;
+    }
+
+    this.showSuggestions = false;
+
+    if (this.consultantAgentOptions.length === 0) {
+      void this.bootstrapConsultantAgent();
+    }
+  }
+
+  handleConsultantAgentOption(option: ConsultantAgentOption) {
+    const label = option.label.trim();
+    if (!label) {
+      return;
+    }
+
+    if (this.messages.length === 0) {
+      const introMessage = this.createMessage('assistant', this.consultantAgentIntro);
+      this.messages = [...this.messages, introMessage];
+    }
+
+    const userMessage = this.createMessage('user', label);
+    const followUp = getConsultantFollowUp(option.id, label);
+
+    const followUpId = this.randomId(12);
+
+    const followUpMessage = this.createMessage(
+      'assistant',
+      buildConsultantFollowUpText(label),
+      { ...followUp, id: followUpId },
+    );
+
+    this.messages = [...this.messages, userMessage, followUpMessage];
+    this.consultantAgentVisible = false;
+    this.errorMessage = '';
+    this.showNewConversationShortcut = true;
+    this.showSuggestions = false;
+    this.activeConsultantFollowUpId = followUpId;
+    this.requestUpdate();
+    this.scrollConversationToBottom();
   }
 
   handleConversationSelect(conversationId: string) {
@@ -1097,6 +1182,8 @@ export class RioAssistWidget extends LitElement {
     this.currentConversationId = null;
     this.activeConversationTitle = null;
     this.showNewConversationShortcut = false;
+    this.showSuggestions = true;
+    this.consultantAgentVisible = false;
     this.dispatchEvent(
       new CustomEvent('rioassist:new-conversation', {
         bubbles: true,
@@ -1249,7 +1336,16 @@ export class RioAssistWidget extends LitElement {
     await this.processMessage(this.message);
   }
 
-  private createMessage(role: ChatRole, text: string): ChatMessage {
+  async handleConsultantFollowUpQuestion(question: string) {
+    this.activeConsultantFollowUpId = null;
+    await this.processMessage(question);
+  }
+
+  private createMessage(
+    role: ChatRole,
+    text: string,
+    consultantFollowUp?: ChatMessage['consultantFollowUp'],
+  ): ChatMessage {
     const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random()}`;
@@ -1260,6 +1356,7 @@ export class RioAssistWidget extends LitElement {
       text,
       html: this.renderMarkdown(text),
       timestamp: Date.now(),
+      consultantFollowUp,
     };
   }
 

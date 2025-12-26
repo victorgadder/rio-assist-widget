@@ -131,6 +131,10 @@ export const miniPanelStyles = css`
     justify-content: center;
   }
 
+  .panel-content--consultant {
+    display: block;
+  }
+
   .hero-card {
     flex: 1;
     display: flex;
@@ -162,6 +166,86 @@ export const miniPanelStyles = css`
     margin: 0;
   }
 
+  .consultant-agent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .consultant-agent__button,
+  .consultant-agent__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    padding: 8px 16px;
+    min-height: 34px;
+    border: 1px solid #30b4c0;
+    border-radius: 4px;
+    background: transparent;
+    color: #30b4c0;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 18px;
+    white-space: normal;
+    text-align: left;
+    word-break: break-word;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .consultant-agent__button:focus-visible,
+  .consultant-agent__option:focus-visible {
+    outline: 2px solid #30b4c0;
+    outline-offset: 2px;
+  }
+
+  .consultant-agent__intro {
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 24px;
+    color: #2a3740;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .consultant-agent__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .consultant-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .consultant-prompt__text {
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 24px;
+    color: #2a3740;
+    text-align: left;
+  }
+
+  .consultant-prompt__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
   .conversation {
     width: 100%;
     display: flex;
@@ -181,6 +265,28 @@ export const miniPanelStyles = css`
 
   .message__content {
     line-height: 1.35;
+  }
+
+  .consultant-follow-up {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .consultant-follow-up__text {
+    margin: 0;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #1f2f36;
+  }
+
+  .consultant-follow-up__options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    width: 100%;
   }
 
   .message__content p,
