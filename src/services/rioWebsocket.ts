@@ -27,13 +27,18 @@ export class RioWebsocketClient {
     return this.token === value;
   }
 
-  async sendMessage(message: string, conversationId?: string | null) {
+  async sendMessage(
+    message: string,
+    conversationId?: string | null,
+    extra?: Record<string, unknown> | null,
+  ) {
     const socket = await this.ensureConnection();
 
     const payload = {
       action: 'sendMessage',
       message,
       conversationId: conversationId ?? null,
+      ...(extra ?? {}),
     };
 
     console.info('[RioAssist][ws] enviando payload de mensagem', payload);

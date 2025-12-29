@@ -11,8 +11,8 @@ import DOMPurify from 'dompurify';
 import {
   CONSULTANT_AGENT_INTRO,
   type ConsultantAgentOption,
+  type ConsultantQuestion,
   buildConsultantFollowUpText,
-  getConsultantFollowUp,
   loadConsultantAgentOptions,
 } from '../../consultant-agent/consultant-agent';
 
@@ -28,7 +28,7 @@ export type ChatMessage = {
     id: string;
     topicId: string;
     topicLabel: string;
-    questions: string[];
+    questions: ConsultantQuestion[];
   };
 };
 
@@ -115,6 +115,7 @@ export class RioAssistWidget extends LitElement {
   consultantAgentOptions: { attribute: false, state: true },
   showSuggestions: { type: Boolean, state: true },
   activeConsultantFollowUpId: { type: String, state: true },
+  activeConsultantBranchId: { type: String, state: true },
 };
 
   open = false;
@@ -202,6 +203,7 @@ export class RioAssistWidget extends LitElement {
   showSuggestions = true;
 
   activeConsultantFollowUpId: string | null = null;
+  activeConsultantBranchId: string | null = null;
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
@@ -550,20 +552,29 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    const questions =
+      option.questions?.filter(
+        (item) => item && typeof item.prompt === 'string' && typeof item.questionId === 'string',
+      ) ?? [];
+
     if (this.messages.length === 0) {
       const introMessage = this.createMessage('assistant', this.consultantAgentIntro);
       this.messages = [...this.messages, introMessage];
     }
 
     const userMessage = this.createMessage('user', label);
-    const followUp = getConsultantFollowUp(option.id, label);
 
     const followUpId = this.randomId(12);
 
     const followUpMessage = this.createMessage(
       'assistant',
       buildConsultantFollowUpText(label),
-      { ...followUp, id: followUpId },
+      {
+        id: followUpId,
+        topicId: option.branchId ?? option.id,
+        topicLabel: label,
+        questions,
+      },
     );
 
     this.messages = [...this.messages, userMessage, followUpMessage];
@@ -572,8 +583,26 @@ export class RioAssistWidget extends LitElement {
     this.showNewConversationShortcut = true;
     this.showSuggestions = false;
     this.activeConsultantFollowUpId = followUpId;
+    this.activeConsultantBranchId = option.branchId ?? option.id;
     this.requestUpdate();
     this.scrollConversationToBottom();
+  }
+
+  async handleConsultantFollowUpQuestion(question: ConsultantQuestion) {
+    this.activeConsultantFollowUpId = null;
+
+    const branchId = this.activeConsultantBranchId;
+    const payload = {
+      consultantContext: {
+        branchId: branchId ?? null,
+        branchLabel: this.lookupConsultantBranchLabel(branchId),
+        questionId: question.questionId,
+        questionLevel: question.level ?? null,
+      },
+      isConsultantAgent: true,
+    };
+
+    await this.processMessage(question.prompt, payload);
   }
 
   handleConversationSelect(conversationId: string) {
@@ -1184,6 +1213,8 @@ export class RioAssistWidget extends LitElement {
     this.showNewConversationShortcut = false;
     this.showSuggestions = true;
     this.consultantAgentVisible = false;
+    this.activeConsultantFollowUpId = null;
+    this.activeConsultantBranchId = null;
     this.dispatchEvent(
       new CustomEvent('rioassist:new-conversation', {
         bubbles: true,
@@ -1336,11 +1367,6 @@ export class RioAssistWidget extends LitElement {
     await this.processMessage(this.message);
   }
 
-  async handleConsultantFollowUpQuestion(question: string) {
-    this.activeConsultantFollowUpId = null;
-    await this.processMessage(question);
-  }
-
   private createMessage(
     role: ChatRole,
     text: string,
@@ -1360,7 +1386,18 @@ export class RioAssistWidget extends LitElement {
     };
   }
 
-  private async processMessage(rawValue: string) {
+  private async processMessage(
+    rawValue: string,
+    options: {
+      consultantContext?: {
+        branchId: string | null;
+        branchLabel: string | null;
+        questionId: string;
+        questionLevel: string | null;
+      } | null;
+      isConsultantAgent?: boolean;
+    } | null = null,
+  ) {
     const content = rawValue.trim();
     if (!content || this.isLoading) {
       return;
@@ -1384,6 +1421,8 @@ export class RioAssistWidget extends LitElement {
           message: content,
           apiBaseUrl: this.apiBaseUrl,
           token: this.rioToken,
+          consultantContext: options?.consultantContext ?? null,
+          isConsultantAgent: options?.isConsultantAgent ?? false,
         },
         bubbles: true,
         composed: true,
@@ -1403,7 +1442,14 @@ export class RioAssistWidget extends LitElement {
 
     try {
       const client = this.ensureRioClient();
-      await client.sendMessage(contentToSend, this.currentConversationId);
+      const extraPayload =
+        options && (options.consultantContext || options.isConsultantAgent)
+          ? {
+              isConsultantAgent: Boolean(options.isConsultantAgent),
+              consultantContext: options.consultantContext ?? null,
+            }
+          : undefined;
+      await client.sendMessage(contentToSend, this.currentConversationId, extraPayload);
     } catch (error) {
       this.clearLoadingGuard();
       this.isLoading = false;
@@ -1957,6 +2003,18 @@ export class RioAssistWidget extends LitElement {
 
     const found = this.conversations.find((item) => item.id === conversationId);
     return found ? found.title : null;
+  }
+
+  private lookupConsultantBranchLabel(branchId: string | null): string | null {
+    if (!branchId) {
+      return null;
+    }
+
+    const found = this.consultantAgentOptions.find(
+      (item) => item.branchId === branchId || item.id === branchId,
+    );
+
+    return found ? found.label : null;
   }
 
   private syncActiveConversationTitle() {

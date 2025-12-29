@@ -4,6 +4,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderConsultantAgentHero } from '../../consultant-agent/consultant-agent.template';
+import type { ConsultantQuestion } from '../../consultant-agent/consultant-agent';
 
 const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', import.meta.url).href;
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
@@ -17,10 +18,12 @@ const renderConsultantFollowUp = (
   payload: {
     id: string;
     topicLabel: string;
-    questions: string[];
+    questions?: ConsultantQuestion[];
   },
 ) => {
-  const buttonsVisible = component.activeConsultantFollowUpId === payload.id;
+  const questions = payload.questions ?? [];
+  const buttonsVisible =
+    component.activeConsultantFollowUpId === payload.id && questions.length > 0;
 
   return html`
     <div class="consultant-follow-up">
@@ -31,14 +34,14 @@ const renderConsultantFollowUp = (
       ${buttonsVisible
         ? html`
             <div class="consultant-follow-up__options">
-              ${payload.questions.map(
+              ${questions.map(
                 (question) => html`
                   <button
                     class="consultant-agent__option"
                     type="button"
                     @click=${() => component.handleConsultantFollowUpQuestion(question)}
                   >
-                    ${question}
+                    ${question.prompt}
                   </button>
                 `,
               )}
