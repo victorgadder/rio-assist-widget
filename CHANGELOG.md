@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.40] - 2025-12-30
+- Remove fallback para mocks no Agente Consultor; agora usa exclusivamente dados da API `/branches`, garantindo que as perguntas de follow-up apareçam corretamente.
+
 ## [0.1.39] - 2025-12-30
 - Corrige URL do Agente Consultor para usar dominio com certificado SSL (`consultant-api.latam-sandbox.rio.cloud`) ao inves do DNS do ALB.
 

@@ -1,6 +1,5 @@
 import {
   CONSULTANT_AGENT_INTRO,
-  CONSULTANT_AGENT_OPTIONS,
   buildConsultantFollowUpText,
   type ConsultantAgentOption,
   type ConsultantFollowUp,
@@ -28,7 +27,7 @@ export function createConsultantAgentState(): ConsultantAgentState {
   return {
     isVisible: false,
     introText: CONSULTANT_AGENT_INTRO,
-    options: [...CONSULTANT_AGENT_OPTIONS],
+    options: [],
   };
 }
 
@@ -51,24 +50,19 @@ export async function loadConsultantAgentOptions(): Promise<ConsultantAgentOptio
       .map((item, index) => normalizeBranch(item, index))
       .filter((option): option is ConsultantAgentOption => Boolean(option));
 
-    if (options.length === 0) {
-      return [...CONSULTANT_AGENT_OPTIONS];
-    }
-
     return options.sort((a, b) => {
       const order = (a.order ?? 0) - (b.order ?? 0);
       if (order !== 0) return order;
       return a.label.localeCompare(b.label);
     });
   } catch (error) {
-    console.error('[ConsultantAgent] Falha ao carregar branches, usando mocks.', error);
-    return [...CONSULTANT_AGENT_OPTIONS];
+    console.error('[ConsultantAgent] Falha ao carregar branches da API.', error);
+    return [];
   }
 }
 
 export {
   CONSULTANT_AGENT_INTRO,
-  CONSULTANT_AGENT_OPTIONS,
   buildConsultantFollowUpText,
   type ConsultantAgentOption,
   type ConsultantFollowUp,
