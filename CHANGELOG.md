@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.38] - 2025-12-19
+- Atualiza endpoint do Agente Consultor para HTTPS para evitar bloqueio de mixed content em páginas seguras.
+
+## [0.1.37] - 2025-12-19
+- Integra Agente Consultor com backend real via `/consultant/api/v1/branches`, carregando ramos/perguntas dinâmicos e ocultando mocks.
+- Follow-ups agora enviam perguntas com `isConsultantAgent` e `consultantContext` (branch/question/level) no payload do WebSocket.
+- Botões de follow-up são ocultados após clique para evitar múltiplas seleções; estado do consultor é resetado em nova conversa.
+
 ## [0.1.36] - 2025-12-19
 - Adiciona modo Agente Consultor com botão "Fale com um consultor" no hero do chat, exibindo introdução e lista de assuntos pré-definidos (mockados e prontos para backend).
 - Ao selecionar um assunto, registra a escolha como mensagem do usuário e mostra resposta guiada com texto "Certo! Reuni abaixo..." e botões de dúvidas específicas por tópico; follow-ups enviam a pergunta ao agente.
