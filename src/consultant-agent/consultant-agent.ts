@@ -14,7 +14,7 @@ export type ConsultantAgentState = {
 };
 
 const CONSULTANT_AGENT_API_BASE =
-  'https://consultant-agent-alb-306464826.eu-west-1.elb.amazonaws.com/consultant/api/v1';
+  'https://consultant-api.latam-sandbox.rio.cloud/consultant/api/v1';
 
 export function getConsultantFollowUp(topicId: string, topicLabel: string): ConsultantFollowUp {
   return {
