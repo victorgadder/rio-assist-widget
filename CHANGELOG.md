@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.39] - 2025-12-30
+- Corrige URL do Agente Consultor para usar dominio com certificado SSL (`consultant-api.latam-sandbox.rio.cloud`) ao inves do DNS do ALB.
+
 ## [0.1.38] - 2025-12-19
 - Atualiza endpoint do Agente Consultor para HTTPS para evitar bloqueio de mixed content em páginas seguras.
 
