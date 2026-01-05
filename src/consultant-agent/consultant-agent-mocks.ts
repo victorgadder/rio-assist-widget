@@ -25,7 +25,7 @@ export type ConsultantFollowUp = {
 };
 
 export const CONSULTANT_AGENT_INTRO =
-  'Olá! Sou o Agente Consultor. Em qual assunto posso ajudar você hoje?';
+  'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Em qual assunto posso ajudar você hoje?';
 
 export const CONSULTANT_AGENT_OPTIONS: ConsultantAgentOption[] = [
   {

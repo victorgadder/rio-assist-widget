@@ -1,4 +1,4 @@
-Ôªøimport './components/rio-assist';
+import './components/rio-assist';
 
 export type RioAssistOptions = {
   target?: HTMLElement;
@@ -13,17 +13,17 @@ export type RioAssistOptions = {
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
-  title: 'Rio Insight',
-  buttonLabel: 'Rio Insight',
+  title: 'RIO Insight',
+  buttonLabel: 'RIO Insight',
   placeholder: 'Pergunte alguma coisa',
   suggestions: [
     'Resumo da Frota',
-    'Frota Dispon√≠vel',
+    'Frota DisponÌvel',
     'Chamados Abertos',
     'Parados + Causas',
-    'Aguardando Pe√ßas',
+    'Aguardando PeÁas',
     'Principais Gargalos',
-    'Tempo por Concession√°ria',
+    'Tempo por Concession·ria',
     'Tempo de Ciclo',
     'Preventiva x Corretiva',
   ],

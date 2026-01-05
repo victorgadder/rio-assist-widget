@@ -138,7 +138,7 @@ export class RioWebsocketClient {
         this.connectPromise = null;
         reject(
           new Error(
-            'Não foi possível abrir conexão com o websocket do Rio Insight.',
+            'Não foi possível abrir conexão com o websocket do RIO Insight.',
           ),
         );
       };
@@ -155,7 +155,7 @@ export class RioWebsocketClient {
     await this.connectPromise;
 
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      throw new Error('Conexão WebSocket do Rio Insight não está pronta.');
+      throw new Error('Conexão WebSocket do RIO Insight não está pronta.');
     }
 
     return this.socket;

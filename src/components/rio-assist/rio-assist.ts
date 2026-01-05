@@ -182,7 +182,7 @@ export class RioAssistWidget extends LitElement {
 
   conversationActionError: ConversationActionErrorState | null = null;
 
-  private loadingLabelInternal = 'Rio Insight está respondendo...';
+  private loadingLabelInternal = 'RIO Insight está respondendo...';
   private loadingTimerSlow: number | null = null;
   private loadingTimerTimeout: number | null = null;
 

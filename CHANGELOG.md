@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.41] - 2025-12-30
+- Padroniza "RIO Insight" com "RIO" em caixa alta nos textos e labels do widget.
+- Atualiza o botao do Agente Consultor para "Consulte o Uptime Agent" e a frase de introducao do agente.
+
 ## [0.1.40] - 2025-12-30
 - Remove fallback para mocks no Agente Consultor; agora usa exclusivamente dados da API `/branches`, garantindo que as perguntas de follow-up apareçam corretamente.
 
@@ -72,7 +76,7 @@
 - Anima reticências do indicador de resposta e mantém texto dinâmico conforme tempo de espera (20s: "continua respondendo"; 60s: aviso de demora maior), mantendo input desabilitado até resposta/erro.
 
 ## [0.1.21] - 2025-11-28
-- Mantém isLoading ativo até receber resposta real do agente (remove timeout de 15s); o estado de "Rio Insight está respondendo..." permanece e a caixa fica desabilitada até chegar a resposta ou erro.
+- Mantém isLoading ativo até receber resposta real do agente (remove timeout de 15s); o estado de "RIO Insight está respondendo..." permanece e a caixa fica desabilitada até chegar a resposta ou erro.
 
 ## [0.1.20] - 2025-11-28
 - Ignora mensagens de websocket com action processing/conversationRenamed/conversationDeleted na transcrição do chat.
