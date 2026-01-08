@@ -24,6 +24,11 @@ export type ChatMessage = {
   text: string;
   html?: string;
   timestamp: number;
+  consultantPrompt?: {
+    id: string;
+    text: string;
+    options: ConsultantAgentOption[];
+  };
   consultantFollowUp?: {
     id: string;
     topicId: string;
@@ -113,10 +118,12 @@ export class RioAssistWidget extends LitElement {
   consultantAgentVisible: { type: Boolean, state: true },
   consultantAgentIntro: { type: String, state: true },
   consultantAgentOptions: { attribute: false, state: true },
-  showSuggestions: { type: Boolean, state: true },
-  activeConsultantFollowUpId: { type: String, state: true },
-  activeConsultantBranchId: { type: String, state: true },
-};
+    showSuggestions: { type: Boolean, state: true },
+    activeConsultantFollowUpId: { type: String, state: true },
+    activeConsultantBranchId: { type: String, state: true },
+    activeConsultantPromptId: { type: String, state: true },
+    consultantAgentStage: { type: String, state: true },
+  };
 
   open = false;
 
@@ -204,6 +211,8 @@ export class RioAssistWidget extends LitElement {
 
   activeConsultantFollowUpId: string | null = null;
   activeConsultantBranchId: string | null = null;
+  activeConsultantPromptId: string | null = null;
+  consultantAgentStage: 'idle' | 'awaiting' | 'ready' = 'idle';
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
@@ -535,8 +544,8 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleConsultantAgentOpen() {
-    if (!this.consultantAgentVisible) {
-      this.consultantAgentVisible = true;
+    if (this.consultantAgentStage === 'awaiting') {
+      return;
     }
 
     this.showSuggestions = false;
@@ -544,6 +553,16 @@ export class RioAssistWidget extends LitElement {
     if (this.consultantAgentOptions.length === 0) {
       void this.bootstrapConsultantAgent();
     }
+
+    const introMessage = this.createMessage(
+      'assistant',
+      'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Para iniciar, estou te enviando o resumo da sua frota.',
+    );
+    this.messages = [...this.messages, introMessage];
+    this.consultantAgentStage = 'awaiting';
+    this.activeConsultantPromptId = null;
+
+    void this.processMessage('Resumo da Frota', { suppressUserMessage: true });
   }
 
   handleConsultantAgentOption(option: ConsultantAgentOption) {
@@ -584,6 +603,7 @@ export class RioAssistWidget extends LitElement {
     this.showSuggestions = false;
     this.activeConsultantFollowUpId = followUpId;
     this.activeConsultantBranchId = option.branchId ?? option.id;
+    this.activeConsultantPromptId = null;
     this.requestUpdate();
     this.scrollConversationToBottom();
   }
@@ -1215,6 +1235,8 @@ export class RioAssistWidget extends LitElement {
     this.consultantAgentVisible = false;
     this.activeConsultantFollowUpId = null;
     this.activeConsultantBranchId = null;
+    this.activeConsultantPromptId = null;
+    this.consultantAgentStage = 'idle';
     this.dispatchEvent(
       new CustomEvent('rioassist:new-conversation', {
         bubbles: true,
@@ -1396,6 +1418,7 @@ export class RioAssistWidget extends LitElement {
         questionLevel: string | null;
       } | null;
       isConsultantAgent?: boolean;
+      suppressUserMessage?: boolean;
     } | null = null,
   ) {
     const content = rawValue.trim();
@@ -1429,8 +1452,10 @@ export class RioAssistWidget extends LitElement {
       }),
     );
 
-    const userMessage = this.createMessage('user', contentToDisplay);
-    this.messages = [...this.messages, userMessage];
+    if (!options?.suppressUserMessage) {
+      const userMessage = this.createMessage('user', contentToDisplay);
+      this.messages = [...this.messages, userMessage];
+    }
     if (wasEmptyConversation) {
       this.showNewConversationShortcut = true;
       this.refreshConversationsAfterResponse = true;
@@ -1521,6 +1546,21 @@ export class RioAssistWidget extends LitElement {
     this.messages = [...this.messages, assistantMessage];
     this.clearLoadingGuard();
     this.isLoading = false;
+
+    if (this.consultantAgentStage === 'awaiting') {
+      const promptId = this.randomId(12);
+      const promptMessage: ChatMessage = {
+        ...this.createMessage('assistant', 'Em qual assunto posso ajudar você hoje?'),
+        consultantPrompt: {
+          id: promptId,
+          text: 'Em qual assunto posso ajudar você hoje?',
+          options: [...this.consultantAgentOptions],
+        },
+      };
+      this.messages = [...this.messages, promptMessage];
+      this.consultantAgentStage = 'ready';
+      this.activeConsultantPromptId = promptId;
+    }
 
     if (this.refreshConversationsAfterResponse) {
       this.refreshConversationsAfterResponse = false;

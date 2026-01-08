@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.44] - 2025-12-30
+- Release com merge da master e fluxo atualizado do botao do consultor (Uptime Agent + prompt apos resposta).
+
+## [0.1.42] - 2025-12-30
+- Ajusta fluxo do Agente Consultor: exibe mensagem "Sou o Uptime Agent..." ao abrir, envia "Resumo da Frota" silenciosamente ao backend e mostra "Em qual assunto posso ajudar você hoje?" com os ramos somente após a resposta.
+- Novos estados de prompt do consultor para controlar exibição das opções e evitar cliques indevidos durante a espera.
+
 ## [0.1.41] - 2025-12-30
 - Padroniza "RIO Insight" com "RIO" em caixa alta nos textos e labels do widget.
 - Atualiza o botao do Agente Consultor para "Consulte o Uptime Agent" e a frase de introducao do agente.

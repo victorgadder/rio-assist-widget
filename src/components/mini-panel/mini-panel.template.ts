@@ -4,7 +4,10 @@ import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderConsultantAgentHero } from '../../consultant-agent/consultant-agent.template';
-import type { ConsultantQuestion } from '../../consultant-agent/consultant-agent';
+import type {
+  ConsultantAgentOption,
+  ConsultantQuestion,
+} from '../../consultant-agent/consultant-agent';
 
 const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', import.meta.url).href;
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
@@ -42,6 +45,40 @@ const renderConsultantFollowUp = (
                     @click=${() => component.handleConsultantFollowUpQuestion(question)}
                   >
                     ${question.prompt}
+                  </button>
+                `,
+              )}
+            </div>
+          `
+        : null}
+    </div>
+  `;
+};
+
+const renderConsultantPrompt = (
+  component: RioAssistWidget,
+  payload: {
+    id: string;
+    text: string;
+    options: ConsultantAgentOption[];
+  },
+) => {
+  const buttonsVisible = component.activeConsultantPromptId === payload.id;
+
+  return html`
+    <div class="consultant-follow-up">
+      <p class="consultant-follow-up__text">${payload.text}</p>
+      ${buttonsVisible
+        ? html`
+            <div class="consultant-follow-up__options">
+              ${payload.options.map(
+                (option) => html`
+                  <button
+                    class="consultant-agent__option"
+                    type="button"
+                    @click=${() => component.handleConsultantAgentOption(option)}
+                  >
+                    ${option.label}
                   </button>
                 `,
               )}
@@ -104,7 +141,9 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             <div class="message__content">
               ${hasFollowUp
                 ? renderConsultantFollowUp(component, (message as any).consultantFollowUp)
-                : unsafeHTML(message.html ?? message.text)}
+                : (message as any).consultantPrompt
+                  ? renderConsultantPrompt(component, (message as any).consultantPrompt)
+                  : unsafeHTML(message.html ?? message.text)}
             </div>
             <time>
               ${new Date(message.timestamp).toLocaleTimeString('pt-BR', {
@@ -190,7 +229,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
         </form>
 
         <p class="footnote">
-          IA pode cometer erros. Por isso lembre-se de conferir informacoes importantes.
+          IA pode cometer erros. Por isso lembre-se de conferir informações importantes.
         </p>
       </div>
     </div>
