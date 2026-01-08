@@ -1524,6 +1524,17 @@ export class RioAssistWidget extends LitElement {
 
     const incomingConversationId = this.extractConversationId(message.data);
     if (incomingConversationId) {
+      // Check if this is a NEW conversation that's not in the sidebar yet
+      const isNewConversation = !this.conversations.some(
+        (conv) => conv.id === incomingConversationId
+      );
+      if (isNewConversation) {
+        // Force refresh of conversation list after response
+        this.refreshConversationsAfterResponse = true;
+        console.info('[RioAssist][ws] nova conversa detectada, agendando refresh da lista', {
+          conversationId: incomingConversationId,
+        });
+      }
       this.currentConversationId = incomingConversationId;
       this.syncActiveConversationTitle();
     }
