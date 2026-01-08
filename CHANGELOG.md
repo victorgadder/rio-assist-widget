@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.45] - 2025-12-30
+- Mantém opções do consultor reaparecendo após respostas do agente enquanto o usuário seguir no fluxo guiado; exibe novo bloco de perguntas e botão "Escolher outro assunto".
+
 ## [0.1.44] - 2025-12-30
 - Release com merge da master e fluxo atualizado do botao do consultor (Uptime Agent + prompt apos resposta).
 

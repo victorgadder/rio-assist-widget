@@ -48,6 +48,13 @@ const renderConsultantFollowUp = (
                   </button>
                 `,
               )}
+              <button
+                class="consultant-agent__option"
+                type="button"
+                @click=${() => component.handleConsultantChooseAnotherSubject()}
+              >
+                Escolher outro assunto.
+              </button>
             </div>
           `
         : null}
