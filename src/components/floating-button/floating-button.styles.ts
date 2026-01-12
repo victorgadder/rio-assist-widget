@@ -41,6 +41,7 @@ export const floatingButtonStyles = css`
     max-width: 0;
     display: block;
     object-fit: contain;
+    pointer-events: none;
     opacity: 0;
     transform: translateX(-6px);
     transition: opacity 160ms ease, transform 160ms ease;

@@ -57,6 +57,7 @@
     max-width: 0;
     display: block;
     object-fit: contain;
+    pointer-events: none;
     opacity: 0;
     transform: translateX(-6px);
     transition: opacity 160ms ease, transform 160ms ease;
@@ -1160,6 +1161,13 @@
     justify-content: center;
     margin-left: 4px;
     flex-shrink: 0;
+  }
+
+  .conversation-menu-button img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
   }
 
   .conversation-menu {

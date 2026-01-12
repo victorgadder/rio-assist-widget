@@ -248,6 +248,13 @@ export const conversationsPanelStyles = css`
     flex-shrink: 0;
   }
 
+  .conversation-menu-button img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+  }
+
   .conversation-menu {
     position: absolute;
     top: calc(100% + 8px);

@@ -1,32 +1,36 @@
 # Changelog
 
+## [0.1.53] - 2026-01-12
+- Ajusta tamanho do ícone de três pontos nas conversas para evitar distorção.
+- Ajuste do funcionamento do slide vertical do botão flutuante.
+
 ## [0.1.52] - 2026-01-12
 - Padroniza textos do widget para UptAIme Assist.
 
 ## [0.1.51] - 2026-01-12
-- Atualiza todas as imagens para melhor resolucao.
+- Atualiza todas as imagens para melhor resolução.
 
 ## [0.1.50] - 2026-01-12
-- Ajuste nos icones dos botoes para melhorar a resolucao.
+- Ajuste nos ícones dos botões para melhorar a resolução.
 
 ## [0.1.49] - 2026-01-12
-- Rebuild do bundle para incluir a label em PNG e o comportamento recolhido/expandido do botao flutuante.
+- Rebuild do bundle para incluir a label em PNG e o comportamento recolhido/expandido do botão flutuante.
 
 ## [0.1.48] - 2026-01-12
-- Botao flutuante recolhe para mostrar apenas o icone e expande no hover para revelar a label.
+- Botão flutuante recolhe para mostrar apenas o ícone e expande no hover para revelar a label.
 
 ## [0.1.47] - 2026-01-12
 - Atualiza lista de conversas ao detectar conversationId novo na resposta do assistente.
 
 ## [0.1.46] - 2026-01-12
-- Troca a label do botao flutuante por imagem do prototipo para garantir fidelidade tipografica.
+- Troca a label do botão flutuante por imagem do protótipo para garantir fidelidade tipográfica.
 - Ajustes nos ícones do botão flutuante e da tela de conversação.
 
 ## [0.1.45] - 2025-12-30
 - Mantém opções do consultor reaparecendo após respostas do agente enquanto o usuário seguir no fluxo guiado; exibe novo bloco de perguntas e botão "Escolher outro assunto".
 
 ## [0.1.44] - 2025-12-30
-- Release com merge da master e fluxo atualizado do botao do consultor (Uptime Agent + prompt apos resposta).
+- Release com merge da master e fluxo atualizado do botão do consultor (Uptime Agent + prompt após resposta).
 
 ## [0.1.42] - 2025-12-30
 - Ajusta fluxo do Agente Consultor: exibe mensagem "Sou o Uptime Agent..." ao abrir, envia "Resumo da Frota" silenciosamente ao backend e mostra "Em qual assunto posso ajudar você hoje?" com os ramos somente após a resposta.
@@ -34,13 +38,13 @@
 
 ## [0.1.41] - 2025-12-30
 - Padroniza "UptAIme Assist" com "RIO" em caixa alta nos textos e labels do widget.
-- Atualiza o botao do Agente Consultor para "Consulte o Uptime Agent" e a frase de introducao do agente.
+- Atualiza o botão do Agente Consultor para "Consulte o Uptime Agent" e a frase de introdução do agente.
 
 ## [0.1.40] - 2025-12-30
 - Remove fallback para mocks no Agente Consultor; agora usa exclusivamente dados da API `/branches`, garantindo que as perguntas de follow-up apareçam corretamente.
 
 ## [0.1.39] - 2025-12-30
-- Corrige URL do Agente Consultor para usar dominio com certificado SSL (`consultant-api.latam-sandbox.rio.cloud`) ao inves do DNS do ALB.
+- Corrige URL do Agente Consultor para usar domínio com certificado SSL (`consultant-api.latam-sandbox.rio.cloud`) ao invés do DNS do ALB.
 
 ## [0.1.38] - 2025-12-19
 - Atualiza endpoint do Agente Consultor para HTTPS para evitar bloqueio de mixed content em páginas seguras.
@@ -176,7 +180,7 @@
 
 ## [0.1.6] - 2025-11-25
 - Atualiza o ícone de fechamento do mini painel.
-- Prepara pacote para publicacao.
+- Prepara pacote para publicação.
 
 ## [0.1.4] - 2025-11-25
 - Incrementa versão para distribuir últimos ajustes do widget.
