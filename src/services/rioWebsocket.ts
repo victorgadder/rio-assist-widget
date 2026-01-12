@@ -138,7 +138,7 @@ export class RioWebsocketClient {
         this.connectPromise = null;
         reject(
           new Error(
-            'Não foi possível abrir conexão com o websocket do RIO Insight.',
+            'Não foi possível abrir conexão com o websocket do UptAIme Assist.',
           ),
         );
       };
@@ -155,7 +155,7 @@ export class RioWebsocketClient {
     await this.connectPromise;
 
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      throw new Error('Conexão WebSocket do RIO Insight não está pronta.');
+      throw new Error('Conexão WebSocket do UptAIme Assist não está pronta.');
     }
 
     return this.socket;
@@ -238,3 +238,4 @@ export class RioWebsocketClient {
     return String(data ?? '');
   }
 }
+

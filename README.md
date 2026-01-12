@@ -1,6 +1,6 @@
-# RIO Insight Widget
+# UptAIme Assist Widget
 
-Widget lateral do RIO Insight embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
+Widget lateral do UptAIme Assist embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
 
 ```json
 {
@@ -20,8 +20,8 @@ Widget lateral do RIO Insight embalado como Web Component. Ao receber o token de
 <script>
   window.RioAssist.init({
     rioToken: '<TOKEN_RIO>',
-    title: 'RIO Insight',
-    buttonLabel: 'RIO Insight',
+    title: 'UptAIme Assist',
+    buttonLabel: 'UptAIme Assist',
     suggestions: [
       'Resumo da Frota',
       'Frota Disponível',
@@ -60,3 +60,4 @@ O metodo `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. To
 - `rioassist:send` - disparado quando o usuario envia uma mensagem. O `detail` contem `{ message, apiBaseUrl, token }`.
 
 Escute esses eventos caso queira registrar logs ou interceptar mensagens antes/depois de irem para o websocket.
+

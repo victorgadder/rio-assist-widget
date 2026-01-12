@@ -134,7 +134,7 @@ export class RioAssistWidget extends LitElement {
 
   message = '';
 
-  titleText = 'RIO Insight';
+  titleText = 'UptAIme Assist';
 
   buttonLabel = 'Uptaime Assist';
 
@@ -194,7 +194,7 @@ export class RioAssistWidget extends LitElement {
 
   conversationActionError: ConversationActionErrorState | null = null;
 
-  private loadingLabelInternal = 'RIO Insight está respondendo...';
+  private loadingLabelInternal = 'UptAIme Assist está respondendo...';
   private loadingTimerSlow: number | null = null;
   private loadingTimerTimeout: number | null = null;
 
@@ -2184,18 +2184,18 @@ export class RioAssistWidget extends LitElement {
 
   private startLoadingGuard() {
     this.clearLoadingGuard();
-    this.loadingLabelInternal = 'RIO Insight está respondendo';
+    this.loadingLabelInternal = 'UptAIme Assist está respondendo';
 
     // Após 20s, mensagem de processamento prolongado.
     this.loadingTimerSlow = window.setTimeout(() => {
-      this.loadingLabelInternal = 'RIO Insight continua respondendo';
+      this.loadingLabelInternal = 'UptAIme Assist continua respondendo';
       this.requestUpdate();
     }, 20000);
 
     // Após 60s, aviso de demora maior.
     this.loadingTimerTimeout = window.setTimeout(() => {
       this.loadingLabelInternal =
-        'RIO Insight ainda está processando sua resposta. Peço que aguarde um pouco mais';
+        'UptAIme Assist ainda está processando sua resposta. Peço que aguarde um pouco mais';
       this.requestUpdate();
     }, 60000);
 
@@ -2311,3 +2311,4 @@ declare global {
 if (!customElements.get('rio-assist-widget')) {
   customElements.define('rio-assist-widget', RioAssistWidget);
 }
+

@@ -254,7 +254,7 @@ export const renderMiniPanel = (component: RioAssistWidget) => {
           <button
             class="close-button"
             @click=${() => component.handleCloseAction()}
-            aria-label="Fechar RIO Insight"
+            aria-label="Fechar UptAIme Assist"
           >
             <img src=${closeIconUrl} alt="" aria-hidden="true" />
           </button>
@@ -318,3 +318,4 @@ export const renderMiniPanel = (component: RioAssistWidget) => {
     </aside>
   `;
 };
+

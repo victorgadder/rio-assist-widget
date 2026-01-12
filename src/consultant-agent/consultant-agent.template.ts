@@ -11,7 +11,7 @@ export const renderConsultantAgentHero = (component: RioAssistWidget) => {
         type="button"
         @click=${() => component.handleConsultantAgentOpen()}
       >
-        Consulte o Uptime Agent
+        Consulte o UptAIme Agent
       </button>
 
       ${consultantAgentVisible

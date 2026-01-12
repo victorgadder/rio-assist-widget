@@ -5,7 +5,7 @@ const apiBaseUrl = import.meta.env.VITE_RIO_API_BASE_URL || '';
 
 const boot = () => {
   window.RioAssist?.init({
-    title: 'RIO Insight',
+    title: 'UptAIme Assist',
     buttonLabel: 'Uptaime Assist',
     accentColor: '#c02267',
     rioToken,
@@ -29,3 +29,4 @@ if (window.RioAssist) {
 } else {
   window.addEventListener('rio-assist-ready', boot, { once: true });
 }
+

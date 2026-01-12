@@ -57,7 +57,7 @@ export const renderFullscreen = (component: RioAssistWidget) => {
         <header class="fullscreen-header">
           <div class="fullscreen-header__title">
             <div class="fullscreen-header__brand-row">
-              <span class="fullscreen-header__brand">RIO INSIGHT</span>
+              <span class="fullscreen-header__brand">UptAIme Assist</span>
               <button
                 type="button"
                 class=${classMap({

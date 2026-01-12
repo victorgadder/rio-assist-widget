@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.52] - 2026-01-12
+- Padroniza textos do widget para UptAIme Assist.
+
+## [0.1.51] - 2026-01-12
+- Atualiza todas as imagens para melhor resolucao.
+
 ## [0.1.50] - 2026-01-12
 - Ajuste nos icones dos botoes para melhorar a resolucao.
 
@@ -27,7 +33,7 @@
 - Novos estados de prompt do consultor para controlar exibição das opções e evitar cliques indevidos durante a espera.
 
 ## [0.1.41] - 2025-12-30
-- Padroniza "RIO Insight" com "RIO" em caixa alta nos textos e labels do widget.
+- Padroniza "UptAIme Assist" com "RIO" em caixa alta nos textos e labels do widget.
 - Atualiza o botao do Agente Consultor para "Consulte o Uptime Agent" e a frase de introducao do agente.
 
 ## [0.1.40] - 2025-12-30
@@ -102,7 +108,7 @@
 - Anima reticências do indicador de resposta e mantém texto dinâmico conforme tempo de espera (20s: "continua respondendo"; 60s: aviso de demora maior), mantendo input desabilitado até resposta/erro.
 
 ## [0.1.21] - 2025-11-28
-- Mantém isLoading ativo até receber resposta real do agente (remove timeout de 15s); o estado de "RIO Insight está respondendo..." permanece e a caixa fica desabilitada até chegar a resposta ou erro.
+- Mantém isLoading ativo até receber resposta real do agente (remove timeout de 15s); o estado de "UptAIme Assist está respondendo..." permanece e a caixa fica desabilitada até chegar a resposta ou erro.
 
 ## [0.1.20] - 2025-11-28
 - Ignora mensagens de websocket com action processing/conversationRenamed/conversationDeleted na transcrição do chat.
@@ -179,3 +185,4 @@
 ## [0.1.2] - 2025-11-25
 - Atualiza o modelo padrão do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
 - Documentação e bundle compilado sincronizados com o novo modelo.
+

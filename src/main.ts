@@ -13,7 +13,7 @@ export type RioAssistOptions = {
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
-  title: 'RIO Insight',
+  title: 'UptAIme Assist',
   buttonLabel: 'Uptaime Assist',
   placeholder: 'Pergunte alguma coisa',
   suggestions: [
@@ -86,6 +86,7 @@ if (typeof window !== 'undefined') {
   };
   window.dispatchEvent(new Event('rio-assist-ready'));
 }
+
 
 
 

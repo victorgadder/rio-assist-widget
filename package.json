@@ -1,7 +1,7 @@
 {
   "name": "rio-assist-widget",
-  "version": "0.1.50",
-  "description": "Web Component do painel lateral RIO Insight, pronto para ser embutido em qualquer projeto.",
+  "version": "0.1.52",
+  "description": "Web Component do painel lateral UptAIme Assist, pronto para ser embutido em qualquer projeto.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
   "keywords": [
     "web component",
     "widget",
-    "RIO Insight",
+    "UptAIme Assist",
     "ai agent"
   ],
   "author": "",
@@ -38,3 +38,4 @@
     "vite": "^5.2.0"
   }
 }
+
