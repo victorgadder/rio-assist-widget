@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.49] - 2026-01-12
+- Rebuild do bundle para incluir a label em PNG e o comportamento recolhido/expandido do botao flutuante.
+
 ## [0.1.48] - 2026-01-12
 - Botao flutuante recolhe para mostrar apenas o icone e expande no hover para revelar a label.
 
