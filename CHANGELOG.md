@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.50] - 2026-01-12
+- Ajuste nos icones dos botoes para melhorar a resolucao.
+
 ## [0.1.49] - 2026-01-12
 - Rebuild do bundle para incluir a label em PNG e o comportamento recolhido/expandido do botao flutuante.
 
