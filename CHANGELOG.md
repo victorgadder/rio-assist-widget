@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.48] - 2026-01-12
+- Botao flutuante recolhe para mostrar apenas o icone e expande no hover para revelar a label.
+
+## [0.1.47] - 2026-01-12
+- Atualiza lista de conversas ao detectar conversationId novo na resposta do assistente.
+
 ## [0.1.46] - 2026-01-12
 - Troca a label do botao flutuante por imagem do prototipo para garantir fidelidade tipografica.
 - Ajustes nos ícones do botão flutuante e da tela de conversação.

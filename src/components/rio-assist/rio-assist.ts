@@ -1593,11 +1593,12 @@ export class RioAssistWidget extends LitElement {
         (conv) => conv.id === incomingConversationId
       );
       if (isNewConversation) {
-        // Force refresh of conversation list after response
-        this.refreshConversationsAfterResponse = true;
-        console.info('[RioAssist][ws] nova conversa detectada, agendando refresh da lista', {
+        // Force refresh of conversation list for brand new conversations
+        this.refreshConversationsAfterResponse = false;
+        console.info('[RioAssist][ws] nova conversa detectada, atualizando lista', {
           conversationId: incomingConversationId,
         });
+        await this.requestConversationHistory();
       }
       this.currentConversationId = incomingConversationId;
       this.syncActiveConversationTitle();
