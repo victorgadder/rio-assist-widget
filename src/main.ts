@@ -14,7 +14,7 @@ export type RioAssistOptions = {
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   title: 'RIO Insight',
-  buttonLabel: 'RIO Insight',
+  buttonLabel: 'Uptaime Assist',
   placeholder: 'Pergunte alguma coisa',
   suggestions: [
     'Resumo da Frota',

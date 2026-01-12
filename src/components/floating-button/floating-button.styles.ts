@@ -6,7 +6,7 @@ export const floatingButtonStyles = css`
     pointer-events: auto;
     right: 0;
     bottom: 32px;
-    width: 160px;
+    width: 200px;
     height: 64px;
     padding: 0 26px 0 10px;
     box-sizing: border-box;
@@ -15,7 +15,7 @@ export const floatingButtonStyles = css`
     gap: 8px;
     color: #fff;
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-weight: 700;
+    font-weight: 500;
     font-size: 18px;
     letter-spacing: -0.2px;
     border-radius: 32px 0 0 32px;
@@ -32,12 +32,11 @@ export const floatingButtonStyles = css`
     display: block;
   }
 
-  .floating-button span {
-    white-space: nowrap;
-    line-height: 1;
-    display: inline-block;
-    flex: 1;
-    text-align: left;
+  .floating-button .floating-button__label-image {
+    height: 36px;
+    width: auto;
+    display: block;
+    object-fit: contain;
   }
 
   .floating-button:hover {

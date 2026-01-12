@@ -3,6 +3,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 
 const buttonIconUrl = new URL('../../assets/icons/iaButtonIcon.png', import.meta.url).href;
+const buttonLabelUrl = new URL('../../assets/icons/buttonLabel.png', import.meta.url).href;
 
 export const renderFloatingButton = (component: RioAssistWidget) => html`
   <button
@@ -19,6 +20,10 @@ export const renderFloatingButton = (component: RioAssistWidget) => html`
     aria-expanded=${component.open}
   >
     <img src=${buttonIconUrl} alt="" aria-hidden="true" />
-    <span>${component.buttonLabel}</span>
+    <img
+      class="floating-button__label-image"
+      src=${buttonLabelUrl}
+      alt=${component.buttonLabel}
+    />
   </button>
 `;

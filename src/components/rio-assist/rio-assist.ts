@@ -136,7 +136,7 @@ export class RioAssistWidget extends LitElement {
 
   titleText = 'RIO Insight';
 
-  buttonLabel = 'RIO Insight';
+  buttonLabel = 'Uptaime Assist';
 
   placeholder = 'Pergunte alguma coisa';
 

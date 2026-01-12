@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.46] - 2026-01-12
+- Troca a label do botao flutuante por imagem do prototipo para garantir fidelidade tipografica.
+- Ajustes nos ícones do botão flutuante e da tela de conversação.
+
 ## [0.1.45] - 2025-12-30
 - Mantém opções do consultor reaparecendo após respostas do agente enquanto o usuário seguir no fluxo guiado; exibe novo bloco de perguntas e botão "Escolher outro assunto".
 
