@@ -1567,7 +1567,7 @@ export class RioAssistWidget extends LitElement {
     return this.rioClient;
   }
 
-  private handleIncomingMessage(message: RioIncomingMessage) {
+  private async handleIncomingMessage(message: RioIncomingMessage) {
     if (this.isHistoryPayload(message)) {
       this.logHistoryPayload(message);
       this.handleHistoryPayload(message.data);
@@ -1661,9 +1661,12 @@ export class RioAssistWidget extends LitElement {
       this.lastConsultantFollowUpId = followUpId;
     }
 
+    // BUGFIX 2026-01-12: Adicionar await para evitar race condition
+    // Sem await, a flag era resetada antes da resposta chegar,
+    // fazendo novas conversas não aparecerem na lista
     if (this.refreshConversationsAfterResponse) {
       this.refreshConversationsAfterResponse = false;
-      this.requestConversationHistory();
+      await this.requestConversationHistory();
     }
   }
 
