@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.55] - 2026-01-13
+- Corrige o timing de exibição do botão flutuante ao fechar o painel, evitando sobreposição de PNGs.
+- Corrige bug visual do botão sobre o painel lateral.
+
+## [0.1.54] - 2026-01-13
+- Atualiza a cor do botão flutuante para #B23672 e ajusta o layout do fundo com boxBackground.
+
 ## [0.1.53] - 2026-01-12
 - Ajusta tamanho do ícone de três pontos nas conversas para evitar distorção.
 - Ajuste do funcionamento do slide vertical do botão flutuante.

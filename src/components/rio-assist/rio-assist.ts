@@ -140,7 +140,7 @@ export class RioAssistWidget extends LitElement {
 
   placeholder = 'Pergunte alguma coisa';
 
-  accentColor = '#008B9A';
+  accentColor = '#B23672';
 
   floatingButtonOffset = 32;
 

@@ -27,7 +27,7 @@ const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
     'Tempo de Ciclo',
     'Preventiva x Corretiva',
   ],
-  accentColor: '#008B9A',
+  accentColor: '#B23672',
   apiBaseUrl: '',
   rioToken: '',
   floatingOffset: 32,

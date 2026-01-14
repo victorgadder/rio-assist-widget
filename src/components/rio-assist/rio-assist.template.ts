@@ -9,6 +9,7 @@ export const renderRioAssist = (component: RioAssistWidget) => {
   const canvasClasses = classMap({
     canvas: true,
     'canvas--fullscreen': component.isFullscreen,
+    'canvas--open': component.open,
   });
 
   return html`

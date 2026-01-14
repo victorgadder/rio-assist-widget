@@ -7,7 +7,7 @@ const boot = () => {
   window.RioAssist?.init({
     title: 'UptAIme Assist',
     buttonLabel: 'Uptaime Assist',
-    accentColor: '#c02267',
+    accentColor: '#B23672',
     rioToken,
     apiBaseUrl,
     suggestions: [

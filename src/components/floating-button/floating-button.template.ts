@@ -4,6 +4,7 @@ import type { RioAssistWidget } from '../rio-assist/rio-assist';
 
 const buttonIconUrl = new URL('../../assets/icons/iaButtonIcon.png', import.meta.url).href;
 const buttonLabelUrl = new URL('../../assets/icons/buttonLabel.png', import.meta.url).href;
+const boxBackgroundUrl = new URL('../../assets/icons/boxBackground.png', import.meta.url).href;
 
 export const renderFloatingButton = (component: RioAssistWidget) => html`
   <button
@@ -19,11 +20,19 @@ export const renderFloatingButton = (component: RioAssistWidget) => html`
     @pointercancel=${(event: PointerEvent) => component.handleFloatingButtonPointerCancel(event)}
     aria-expanded=${component.open}
   >
-    <img src=${buttonIconUrl} alt="" aria-hidden="true" />
     <img
-      class="floating-button__label-image"
-      src=${buttonLabelUrl}
-      alt=${component.buttonLabel}
+      class="floating-button__box-bg"
+      src=${boxBackgroundUrl}
+      alt=""
+      aria-hidden="true"
     />
+    <span class="floating-button__content">
+      <img class="floating-button__icon" src=${buttonIconUrl} alt="" aria-hidden="true" />
+      <img
+        class="floating-button__label-image"
+        src=${buttonLabelUrl}
+        alt=${component.buttonLabel}
+      />
+    </span>
   </button>
 `;
