@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.1.56] - 2026-01-15
+- Usa conversationTitle da resposta do websocket para exibir a nova conversa imediatamente na lista.
+
 ## [0.1.55] - 2026-01-13
 - Corrige o timing de exibição do botão flutuante ao fechar o painel, evitando sobreposição de PNGs.
 - Corrige bug visual do botão sobre o painel lateral.

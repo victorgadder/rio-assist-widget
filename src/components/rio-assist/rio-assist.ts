@@ -1587,11 +1587,36 @@ export class RioAssistWidget extends LitElement {
     }
 
     const incomingConversationId = this.extractConversationId(message.data);
+    const incomingConversationTitle = typeof (message.data as any)?.conversationTitle === 'string'
+      ? (message.data as any).conversationTitle.trim()
+      : '';
     if (incomingConversationId) {
-      // Check if this is a NEW conversation that's not in the sidebar yet
-      const isNewConversation = !this.conversations.some(
-        (conv) => conv.id === incomingConversationId
+      const existingIndex = this.conversations.findIndex(
+        (conv) => conv.id === incomingConversationId,
       );
+      // Check if this is a NEW conversation that's not in the sidebar yet
+      const isNewConversation = existingIndex === -1;
+
+      if (incomingConversationTitle) {
+        const updatedAt = new Date().toISOString();
+        if (isNewConversation) {
+          this.conversations = [
+            { id: incomingConversationId, title: incomingConversationTitle, updatedAt },
+            ...this.conversations,
+          ];
+        } else {
+          const existing = this.conversations[existingIndex];
+          const next = [...this.conversations];
+          next.splice(existingIndex, 1);
+          next.unshift({
+            ...existing,
+            title: incomingConversationTitle,
+            updatedAt,
+          });
+          this.conversations = next;
+        }
+        this.activeConversationTitle = incomingConversationTitle;
+      }
       if (isNewConversation) {
         // Force refresh of conversation list for brand new conversations
         this.refreshConversationsAfterResponse = false;
