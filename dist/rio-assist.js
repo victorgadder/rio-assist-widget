@@ -993,11 +993,16 @@
     height: 100%;
     background: #d0d8de;
     padding: 12px 32px 24px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 16px;
     transform: translateX(100%);
     transition: transform 0.35s ease;
+  }
+
+  .conversations-panel:not(.conversations-panel--sidebar) .conversations-panel__surface {
+    padding: 12px 12px 24px 32px;
   }
 
   .conversations-panel--open .conversations-panel__surface {
@@ -1088,6 +1093,11 @@
     box-sizing: border-box;
   }
 
+  .conversations-panel:not(.conversations-panel--sidebar) .conversation-list {
+    margin-right: -12px;
+    padding-right: 12px;
+  }
+
   .conversation-list-wrapper {
     position: relative;
     display: flex;
@@ -1104,6 +1114,7 @@
     width: 100%;
     padding-left: 16px;
     padding-right: 14px;
+    padding-top: 10px;
     overflow-y: auto;
     min-height: 0;
     scrollbar-width: none;
@@ -1160,10 +1171,16 @@
     transition: color 0.2s ease, background-color 0.2s ease;
   }
 
+  .conversations-panel:not(.conversations-panel--sidebar) .conversation-item {
+    padding: 0 0 0 6px;
+  }
+
   .conversations-panel--sidebar .conversation-item {
     border-radius: 8px;
     background: transparent;
-    padding-right: 8px;
+    padding: 6px 8px 6px 6px;
+    height: 66px;
+    align-items: center;
   }
 
   .conversations-panel--sidebar .conversation-item__text {

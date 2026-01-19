@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.57] - 2026-01-19
+- Ajusta espacos e altura fixa dos itens na lista de conversas do sidebar.
+- Alinha itens da lista e scrollbar no mini painel para evitar cortes na rolagem.
+
 ## [0.1.56] - 2026-01-15
 - Usa conversationTitle da resposta do websocket para exibir a nova conversa imediatamente na lista.
 
