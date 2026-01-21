@@ -18,6 +18,32 @@ import {
 
 type ChatRole = 'user' | 'assistant';
 
+type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image';
+
+type AttachmentItem = {
+  id: string;
+  file: File;
+  name: string;
+  typeLabel: string;
+  kind: AttachmentKind;
+  previewUrl?: string;
+};
+
+const MAX_ATTACHMENT_COUNT = 3;
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_KIND_MAP: Record<AttachmentKind, string[]> = {
+  text: ['txt', 'doc', 'docx'],
+  sheet: ['xls', 'xlsx', 'csv'],
+  pdf: ['pdf'],
+  image: ['jpg', 'jpeg', 'png'],
+};
+const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
+  text: 'Documento de Texto',
+  sheet: 'Planilha',
+  pdf: 'Documento PDF',
+  image: 'Imagem',
+};
+
 export type ChatMessage = {
   id: string;
   role: ChatRole;
@@ -100,6 +126,8 @@ export class RioAssistWidget extends LitElement {
     conversationSearch: { type: String, state: true },
     conversationMenuId: { state: true },
     conversationMenuPlacement: { state: true },
+    selectedFiles: { attribute: false, state: true },
+    attachmentError: { type: String, state: true },
   isFullscreen: { type: Boolean, state: true },
   conversationScrollbar: { state: true },
   showNewConversationShortcut: { type: Boolean, state: true },
@@ -133,6 +161,10 @@ export class RioAssistWidget extends LitElement {
   open = false;
 
   message = '';
+
+  selectedFiles: AttachmentItem[] = [];
+
+  attachmentError = '';
 
   titleText = 'UptAIme Assist';
 
@@ -289,6 +321,55 @@ export class RioAssistWidget extends LitElement {
     return result;
   }
 
+  private getFileExtension(filename: string) {
+    const parts = filename.split('.');
+    if (parts.length < 2) {
+      return '';
+    }
+
+    return parts[parts.length - 1].toLowerCase();
+  }
+
+  private resolveAttachmentKind(extension: string): AttachmentKind | null {
+    const normalized = extension.toLowerCase();
+    const entries = Object.entries(ATTACHMENT_KIND_MAP) as [AttachmentKind, string[]][];
+
+    for (const [kind, extensions] of entries) {
+      if (extensions.includes(normalized)) {
+        return kind;
+      }
+    }
+
+    return null;
+  }
+
+  private buildAttachmentItem(file: File): { item?: AttachmentItem; error?: string } {
+    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      return { error: `O arquivo ${file.name} excede 10 MB.` };
+    }
+
+    const extension = this.getFileExtension(file.name);
+    const kind = this.resolveAttachmentKind(extension);
+    if (!kind) {
+      return { error: `Formato nao suportado: ${file.name}.` };
+    }
+
+    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : this.randomId(12);
+
+    return {
+      item: {
+        id,
+        file,
+        name: file.name,
+        typeLabel: ATTACHMENT_KIND_LABEL[kind],
+        kind,
+        previewUrl: kind === 'image' ? URL.createObjectURL(file) : undefined,
+      },
+    };
+  }
+
   private clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
   }
@@ -409,6 +490,12 @@ export class RioAssistWidget extends LitElement {
       cancelAnimationFrame(this.conversationScrollbarRaf);
       this.conversationScrollbarRaf = null;
     }
+
+    this.selectedFiles.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
 
     this.teardownRioClient();
     this.clearLoadingGuard();
@@ -1444,13 +1531,79 @@ export class RioAssistWidget extends LitElement {
     await this.processMessage(suggestion);
   }
 
+  handleFilePickerClick() {
+    if (this.isLoading) {
+      return;
+    }
+
+    const input = this.renderRoot.querySelector('.file-input') as HTMLInputElement | null;
+    if (input && !input.disabled) {
+      input.click();
+    }
+  }
+
+  handleFileInputChange(event: Event) {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    const previousFiles = this.selectedFiles;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    const next = [...this.selectedFiles];
+    let error = '';
+
+    for (const file of files) {
+      if (next.length >= MAX_ATTACHMENT_COUNT) {
+        error = 'Voce pode anexar no maximo 3 arquivos.';
+        break;
+      }
+
+      const { item, error: itemError } = this.buildAttachmentItem(file);
+      if (itemError) {
+        error = itemError;
+        continue;
+      }
+
+      if (item) {
+        next.push(item);
+      }
+    }
+
+    this.selectedFiles = next;
+    this.attachmentError = error;
+
+    previousFiles.forEach((item) => {
+      if (item.previewUrl && !this.selectedFiles.find((entry) => entry.id === item.id)) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+  }
+
+  handleAttachmentRemove(id: string) {
+    const removed = this.selectedFiles.find((item) => item.id === id);
+    this.selectedFiles = this.selectedFiles.filter((item) => item.id !== id);
+    if (removed?.previewUrl) {
+      URL.revokeObjectURL(removed.previewUrl);
+    }
+    if (this.selectedFiles.length === 0) {
+      this.attachmentError = '';
+    }
+  }
+
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     this.consultantOptionsSuppressed = true;
     this.activeConsultantFollowUpId = null;
     this.activeConsultantPromptId = null;
     this.pendingConsultantFollowUpId = null;
-    await this.processMessage(this.message);
+    await this.processMessage(this.message, { attachments: this.selectedFiles });
   }
 
   private createMessage(
@@ -1483,6 +1636,7 @@ export class RioAssistWidget extends LitElement {
       } | null;
       isConsultantAgent?: boolean;
       suppressUserMessage?: boolean;
+      attachments?: AttachmentItem[];
     } | null = null,
   ) {
     const content = rawValue.trim();
@@ -1510,6 +1664,7 @@ export class RioAssistWidget extends LitElement {
           token: this.rioToken,
           consultantContext: options?.consultantContext ?? null,
           isConsultantAgent: options?.isConsultantAgent ?? false,
+          attachments: options?.attachments?.map((item) => item.file) ?? [],
         },
         bubbles: true,
         composed: true,
@@ -1539,6 +1694,15 @@ export class RioAssistWidget extends LitElement {
             }
           : undefined;
       await client.sendMessage(contentToSend, this.currentConversationId, extraPayload);
+      if (options?.attachments?.length) {
+        this.selectedFiles.forEach((item) => {
+          if (item.previewUrl) {
+            URL.revokeObjectURL(item.previewUrl);
+          }
+        });
+        this.selectedFiles = [];
+        this.attachmentError = '';
+      }
     } catch (error) {
       this.clearLoadingGuard();
       this.isLoading = false;

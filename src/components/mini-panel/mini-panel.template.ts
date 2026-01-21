@@ -14,7 +14,9 @@ const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta
 const iaCentralIconUrl = new URL('../../assets/icons/iaCentralIcon.png', import.meta.url).href;
 const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
+const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', import.meta.url).href;
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
+const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
 
 const renderConsultantFollowUp = (
   component: RioAssistWidget,
@@ -215,7 +217,81 @@ export const renderChatSurface = (component: RioAssistWidget) => {
         <form
           @submit=${(event: SubmitEvent) => component.handleSubmit(event)}
           aria-busy=${component.isLoading}
+          class=${classMap({
+            'input-shell': true,
+            'input-shell--has-attachments': component.selectedFiles.length > 0,
+          })}
         >
+          ${component.selectedFiles.length > 0
+            ? html`
+                <div class="attachments">
+                  ${component.selectedFiles.map((attachment) =>
+                    attachment.kind === 'image'
+                      ? html`
+                          <div class="attachment-thumb">
+                            <img
+                              src=${attachment.previewUrl ?? ''}
+                              alt=${attachment.name}
+                              loading="lazy"
+                            />
+                            <button
+                              class="attachment-thumb__remove"
+                              type="button"
+                              aria-label=${`Remover ${attachment.name}`}
+                              @click=${() => component.handleAttachmentRemove(attachment.id)}
+                            >
+                              <img src=${closeFileCardIconUrl} alt="" aria-hidden="true" />
+                            </button>
+                          </div>
+                        `
+                      : html`
+                          <div class="attachment-card attachment-card--${attachment.kind}">
+                            <span
+                              class="attachment-card__icon"
+                              style=${`--file-icon: url(${fileTypeIconUrl});`}
+                              aria-hidden="true"
+                            ></span>
+                            <div class="attachment-card__meta">
+                              <strong>${attachment.name}</strong>
+                              <span>${attachment.typeLabel}</span>
+                            </div>
+                            <button
+                              class="attachment-card__remove"
+                              type="button"
+                              aria-label=${`Remover ${attachment.name}`}
+                              @click=${() => component.handleAttachmentRemove(attachment.id)}
+                            >
+                              <img src=${closeFileCardIconUrl} alt="" aria-hidden="true" />
+                            </button>
+                          </div>
+                        `,
+                  )}
+                </div>
+              `
+            : null}
+          ${component.attachmentError
+            ? html`<p class="attachment-error">${component.attachmentError}</p>`
+            : null}
+          <div class="input-row">
+          <button
+            class="input-button input-button--file"
+            type="button"
+            aria-label="Selecionar arquivos"
+            @click=${() => component.handleFilePickerClick()}
+            ?disabled=${component.isLoading}
+          >
+            <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
+          </button>
+          <input
+            class="file-input"
+            type="file"
+            accept=".txt,.doc,.docx,.xls,.xlsx,.csv,.pdf,.jpg,.jpeg,.png"
+            multiple
+            @change=${(event: Event) => component.handleFileInputChange(event)}
+            ?disabled=${component.isLoading}
+            aria-hidden="true"
+            tabindex="-1"
+          />
           <input
             type="text"
             placeholder=${component.placeholder}
@@ -233,6 +309,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
           >
             <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
           </button>
+          </div>
         </form>
 
         <p class="footnote">

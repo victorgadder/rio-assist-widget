@@ -504,19 +504,183 @@ export const miniPanelStyles = css`
     white-space: nowrap;
   }
 
+  .attachments {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-start;
+    padding: 0px 6px 2px;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .attachment-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid #d6e2e6;
+    border-radius: 12px;
+    background: #fff;
+    max-width: 100%;
+    flex: 0 0 auto;
+    position: relative;
+  }
+
+  .attachment-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    display: inline-block;
+    background-color: #1b8dd9;
+    background-image: var(--file-icon);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    flex-shrink: 0;
+  }
+
+  .attachment-card--text .attachment-card__icon {
+    background-color: #1b8dd9;
+  }
+
+  .attachment-card--sheet .attachment-card__icon {
+    background-color: #2e9d63;
+  }
+
+  .attachment-card--pdf .attachment-card__icon {
+    background-color: #d64b4b;
+  }
+
+  .attachment-card__meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .attachment-card__meta strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2f36;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .attachment-card__meta span {
+    font-size: 11px;
+    color: #7b8b97;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .attachment-card__remove {
+    width: 19.2px;
+    height: 19.2px;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+  }
+
+  .attachment-card__remove img {
+    width: 19.2px;
+    height: 19.2px;
+  }
+
+  .attachment-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    flex: 0 0 auto;
+    border: 1px solid #d6e2e6;
+    background: #fff;
+  }
+
+  .attachment-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .attachment-thumb__remove {
+    width: 19.2px;
+    height: 19.2px;
+    border: none;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+  }
+
+  .attachment-thumb__remove img {
+    width: 19.2px;
+    height: 19.2px;
+  }
+
+  .attachment-error {
+    margin: 0;
+    font-size: 12px;
+    color: #d64b4b;
+    align-self: flex-start;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    width: 100%;
+  }
+
   form {
     display: flex;
     align-items: center;
     gap: 12px;
     border: 1px solid #a4afbb;
     border-radius: 80px;
-    padding: 8px 12px 8px 16px;
+    padding: 8px 8px 8px 16px;
     background: #fff;
     width: 100%;
     max-width: 520px;
     margin-bottom: 0;
     height: 56px;
     box-sizing: border-box;
+  }
+
+  .input-shell--has-attachments {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    height: auto;
+    border-radius: 28px;
+    padding: 12px;
+  }
+
+  .input-shell--has-attachments .input-row {
+    padding: 0 4px 2px;
+  }
+
+  .file-input {
+    display: none;
   }
 
   form input {
@@ -551,6 +715,11 @@ export const miniPanelStyles = css`
   .input-button img {
     width: 40px;
     height: 40px;
+  }
+
+  .input-button--file img {
+    width: 32px;
+    height: 32px;
   }
 
   .input-button:disabled {

@@ -207,13 +207,13 @@ export const fullscreenStyles = css`
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     box-sizing: border-box;
   }
 
   .fullscreen-chat .panel-body {
-    max-width: 920px;
+    max-width: none;
     width: 100%;
     padding: 12px clamp(20px, 3vw, 44px) 12px;
     margin: 0 auto;
@@ -221,7 +221,7 @@ export const fullscreenStyles = css`
   }
 
   .fullscreen-chat .panel-footer {
-    max-width: 640px;
+    max-width: none;
     width: 100%;
     padding: 0 clamp(16px, 3vw, 32px);
     box-sizing: border-box;

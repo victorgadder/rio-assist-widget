@@ -1,4 +1,10 @@
 # Changelog
+  
+## [0.1.58] - 2026-01-21
+- Adiciona anexos no input do chat com validacao de tamanho/formato, exibicao de cards e miniaturas.
+- Inclui suporte a imagens (JPG/PNG) com miniaturas e botao de remocao dedicado.
+- Ajusta layout do input e anexos conforme prototipo (quebra de linha, icones, espacamentos e bordas).
+- Atualiza chat fullscreen para ocupar toda a largura util.
 
 ## [0.1.57] - 2026-01-19
 - Ajusta espacos e altura fixa dos itens na lista de conversas do sidebar.
