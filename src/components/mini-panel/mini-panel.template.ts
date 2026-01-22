@@ -273,25 +273,6 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             ? html`<p class="attachment-error">${component.attachmentError}</p>`
             : null}
           <div class="input-row">
-          <button
-            class="input-button input-button--file"
-            type="button"
-            aria-label="Selecionar arquivos"
-            @click=${() => component.handleFilePickerClick()}
-            ?disabled=${component.isLoading}
-          >
-            <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
-          </button>
-          <input
-            class="file-input"
-            type="file"
-            accept=".txt,.doc,.docx,.xls,.xlsx,.csv,.pdf,.jpg,.jpeg,.png"
-            multiple
-            @change=${(event: Event) => component.handleFileInputChange(event)}
-            ?disabled=${component.isLoading}
-            aria-hidden="true"
-            tabindex="-1"
-          />
           <input
             type="text"
             placeholder=${component.placeholder}

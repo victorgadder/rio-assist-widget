@@ -1,5 +1,8 @@
 # Changelog
   
+## [0.1.59] - 2026-01-22
+- Oculta temporariamente o botao de anexos no input do chat.
+
 ## [0.1.58] - 2026-01-21
 - Adiciona anexos no input do chat com validacao de tamanho/formato, exibicao de cards e miniaturas.
 - Inclui suporte a imagens (JPG/PNG) com miniaturas e botao de remocao dedicado.
