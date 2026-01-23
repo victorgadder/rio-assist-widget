@@ -61,3 +61,10 @@ O metodo `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. To
 
 Escute esses eventos caso queira registrar logs ou interceptar mensagens antes/depois de irem para o websocket.
 
+## Horario das mensagens
+O historico exibe o horario real das mensagens recebidas do backend. Para datas anteriores, usamos um formato relativo:
+- Hoje: apenas a hora.
+- Ontem: "ontem" + hora.
+- Entre 2 e 5 dias: dia da semana + hora.
+- Mais antigo: data completa + hora.
+

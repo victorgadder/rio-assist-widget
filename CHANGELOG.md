@@ -1,5 +1,9 @@
 # Changelog
   
+## [0.1.60] - 2026-01-23
+- Corrige o horario das respostas no historico, evitando mostrar o horario atual ao recarregar conversas.
+- Exibe data relativa nas mensagens: "ontem" e dia da semana entre 2 e 5 dias, mantendo data completa depois.
+
 ## [0.1.59] - 2026-01-22
 - Oculta temporariamente o botao de anexos no input do chat.
 

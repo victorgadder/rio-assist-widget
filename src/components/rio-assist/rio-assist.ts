@@ -2316,9 +2316,23 @@ export class RioAssistWidget extends LitElement {
   }
 
   private parseTimestamp(value: unknown, fallback?: number) {
-    const parsed = Date.parse(this.toIsoString(value));
-    if (Number.isFinite(parsed)) {
-      return parsed;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) {
+        const numeric = Number(trimmed);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+
+        const parsed = Date.parse(trimmed);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
     }
 
     if (Number.isFinite(fallback ?? NaN)) {
