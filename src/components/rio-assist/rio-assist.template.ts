@@ -101,6 +101,33 @@ export const renderRioAssist = (component: RioAssistWidget) => {
             </div>
           `
         : null}
+      ${component.voiceCancelDialogOpen
+        ? html`
+            <div class="dialog-overlay" role="dialog" aria-modal="true">
+              <div class="dialog">
+                <p class="dialog__message">Deseja cancelar a mensagem de voz?</p>
+                <div class="dialog__actions">
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--danger"
+                    @click=${() => component.handleVoiceDialogConfirm()}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    class="dialog__button dialog__button--primary"
+                    @click=${() => component.handleVoiceDialogContinue()}
+                  >
+                    ${component.voiceCancelDialogMode === 'cancel'
+                      ? 'CONTINUAR GRAVAÇÃO'
+                      : 'MANTER GRAVAÇÃO'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          `
+        : null}
       ${component.newConversationConfirmOpen
         ? html`
             <div class="dialog-overlay" role="dialog" aria-modal="true">

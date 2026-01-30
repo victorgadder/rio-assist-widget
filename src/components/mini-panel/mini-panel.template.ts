@@ -16,6 +16,9 @@ const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png',
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
 const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', import.meta.url).href;
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
+const voiceRecoverIconUrl = new URL('../../assets/icons/voiceRecoverIcon.png', import.meta.url).href;
+const cancelVoiceIconUrl = new URL('../../assets/icons/cancelVoice.png', import.meta.url).href;
+const confirmVoiceIconUrl = new URL('../../assets/icons/confirmVoice.png', import.meta.url).href;
 const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
 
 const formatMessageTimestamp = (timestamp: number) => {
@@ -253,6 +256,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
           class=${classMap({
             'input-shell': true,
             'input-shell--has-attachments': component.selectedFiles.length > 0,
+            'input-shell--recording': component.isRecording,
           })}
         >
           ${component.selectedFiles.length > 0
@@ -281,7 +285,11 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                           <div class="attachment-card attachment-card--${attachment.kind}">
                             <span
                               class="attachment-card__icon"
-                              style=${`--file-icon: url(${fileTypeIconUrl});`}
+                              style=${`--file-icon: url(${
+                                attachment.kind === 'audio'
+                                  ? voiceRecoverIconUrl
+                                  : fileTypeIconUrl
+                              });`}
                               aria-hidden="true"
                             ></span>
                             <div class="attachment-card__meta">
@@ -292,7 +300,10 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                               class="attachment-card__remove"
                               type="button"
                               aria-label=${`Remover ${attachment.name}`}
-                              @click=${() => component.handleAttachmentRemove(attachment.id)}
+                              @click=${() =>
+                                attachment.kind === 'audio'
+                                  ? component.handleVoiceAttachmentRemove(attachment.id)
+                                  : component.handleAttachmentRemove(attachment.id)}
                             >
                               <img src=${closeFileCardIconUrl} alt="" aria-hidden="true" />
                             </button>
@@ -302,27 +313,104 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                 </div>
               `
             : null}
+          ${component.hasVoiceAttachment && !component.speechRecognitionAvailable
+            ? html`
+                <p class="voice-transcript voice-transcript--unavailable">
+                  A transcrição não foi possível pois a ferramenta não está disponível no seu navegador
+                </p>
+              `
+            : null}
           ${component.attachmentError
             ? html`<p class="attachment-error">${component.attachmentError}</p>`
             : null}
-          <div class="input-row">
           <input
-            type="text"
-            placeholder=${component.placeholder}
-            .value=${component.message}
-            @input=${(event: InputEvent) => {
-              component.message = (event.target as HTMLInputElement).value;
-            }}
-            ?disabled=${component.isLoading}
+            class="file-input"
+            type="file"
+            accept=${component.filePickerAccept}
+            multiple
+            ?disabled=${component.isFilePickerDisabled}
+            @change=${(event: Event) => component.handleFileInputChange(event)}
           />
-          <button
-            class="input-button submit-button"
-            type="submit"
-            aria-label="Enviar mensagem"
-            ?disabled=${component.isLoading}
-          >
-            <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
-          </button>
+          <div class="input-row">
+            <button
+              class="input-button input-button--file"
+              type="button"
+              aria-label="Anexar arquivos"
+              @click=${() => component.handleFilePickerClick()}
+              ?disabled=${component.isFilePickerDisabled}
+            >
+              <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
+            </button>
+            ${component.isRecording
+              ? html`<span class="voice-recording-label">Ouvindo...</span>`
+              : component.hasVoiceAttachment
+                ? html`
+                    <div
+                      class=${classMap({
+                        'voice-input-locked': true,
+                        'voice-input-locked--error': !component.voiceTranscript,
+                      })}
+                      aria-live="polite"
+                    >
+                      ${component.voiceTranscript
+                        ? html`${component.voiceTranscript}`
+                        : component.speechRecognitionAvailable
+                          ? html`Não foi possível gerar a transcrição desta mensagem.`
+                          : html`
+                              A transcrição não foi possível pois a ferramenta não está disponível no seu navegador
+                            `}
+                    </div>
+                  `
+                : html`
+                    <input
+                      type="text"
+                      placeholder=${component.placeholder}
+                      .value=${component.message}
+                      @input=${(event: InputEvent) => {
+                        component.message = (event.target as HTMLInputElement).value;
+                      }}
+                      ?disabled=${component.isTextInputDisabled}
+                    />
+                  `}
+            ${component.isRecording
+              ? html`
+                  <div class="voice-recording-actions">
+                    <button
+                      class="input-button input-button--voice-action"
+                      type="button"
+                      aria-label="Cancelar gravação"
+                      @click=${() => component.handleVoiceCancelClick()}
+                    >
+                      <img src=${cancelVoiceIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button
+                      class="input-button input-button--voice-action"
+                      type="button"
+                      aria-label="Confirmar gravação"
+                      @click=${() => component.handleVoiceConfirmClick()}
+                    >
+                      <img src=${confirmVoiceIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                  </div>
+                `
+              : null}
+            <button
+              class="input-button input-button--voice"
+              type="button"
+              aria-label="Gravar mensagem de voz"
+              @click=${() => component.handleVoiceButtonClick()}
+              ?disabled=${component.isVoiceButtonDisabled}
+            >
+              <img src=${voiceRecoverIconUrl} alt="" aria-hidden="true" />
+            </button>
+            <button
+              class="input-button submit-button"
+              type="submit"
+              aria-label="Enviar mensagem"
+              ?disabled=${component.isLoading || component.isRecording}
+            >
+              <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
+            </button>
           </div>
         </form>
 

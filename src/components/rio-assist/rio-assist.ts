@@ -18,7 +18,7 @@ import {
 
 type ChatRole = 'user' | 'assistant';
 
-type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image';
+type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image' | 'audio';
 
 type AttachmentItem = {
   id: string;
@@ -36,12 +36,14 @@ const ATTACHMENT_KIND_MAP: Record<AttachmentKind, string[]> = {
   sheet: ['xls', 'xlsx', 'csv'],
   pdf: ['pdf'],
   image: ['jpg', 'jpeg', 'png'],
+  audio: ['wav', 'mp3', 'm4a', 'ogg', 'webm'],
 };
 const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
   text: 'Documento de Texto',
   sheet: 'Planilha',
   pdf: 'Documento PDF',
   image: 'Imagem',
+  audio: 'Mensagem de audio',
 };
 
 export type ChatMessage = {
@@ -128,6 +130,13 @@ export class RioAssistWidget extends LitElement {
     conversationMenuPlacement: { state: true },
     selectedFiles: { attribute: false, state: true },
     attachmentError: { type: String, state: true },
+    isRecording: { type: Boolean, state: true },
+    isRecordingPaused: { type: Boolean, state: true },
+    voiceAttachmentId: { type: String, state: true },
+    voiceTranscript: { type: String, state: true },
+    voiceCancelDialogOpen: { type: Boolean, state: true },
+    voiceCancelDialogMode: { type: String, state: true },
+    speechRecognitionAvailable: { type: Boolean, state: true },
   isFullscreen: { type: Boolean, state: true },
   conversationScrollbar: { state: true },
   showNewConversationShortcut: { type: Boolean, state: true },
@@ -165,6 +174,20 @@ export class RioAssistWidget extends LitElement {
   selectedFiles: AttachmentItem[] = [];
 
   attachmentError = '';
+
+  isRecording = false;
+
+  isRecordingPaused = false;
+
+  voiceAttachmentId: string | null = null;
+
+  voiceTranscript = '';
+
+  voiceCancelDialogOpen = false;
+
+  voiceCancelDialogMode: 'cancel' | 'remove' = 'cancel';
+
+  speechRecognitionAvailable = false;
 
   titleText = 'UptAIme Assist';
 
@@ -263,6 +286,15 @@ export class RioAssistWidget extends LitElement {
     | null = null;
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
+
+  private voiceRecorder: MediaRecorder | null = null;
+  private voiceRecordingStream: MediaStream | null = null;
+  private voiceRecordingChunks: BlobPart[] = [];
+  private speechRecognizer: any | null = null;
+  private voiceTranscriptSegments: string[] = [];
+  private voiceTranscriptPreview = '';
+  private pendingVoiceRemovalId: string | null = null;
+  private microphonePermissionGranted = false;
 
   private inferUserIdFromToken(): string | null {
     const token = this.rioToken.trim();
@@ -497,6 +529,8 @@ export class RioAssistWidget extends LitElement {
       }
     });
 
+    this.teardownVoiceRecording();
+
     this.teardownRioClient();
     this.clearLoadingGuard();
   }
@@ -526,6 +560,48 @@ export class RioAssistWidget extends LitElement {
 
   get hasActiveConversation() {
     return this.messages.length > 0;
+  }
+
+  get hasVoiceAttachment() {
+    return Boolean(this.voiceAttachmentId);
+  }
+
+  get isAttachmentLimitReached() {
+    return this.selectedFiles.length >= MAX_ATTACHMENT_COUNT;
+  }
+
+  get isVoiceButtonDisabled() {
+    return (
+      this.isLoading ||
+      this.isRecording ||
+      this.hasVoiceAttachment ||
+      this.isAttachmentLimitReached
+    );
+  }
+
+  get isFilePickerDisabled() {
+    return this.isLoading || this.isRecording || this.isAttachmentLimitReached;
+  }
+
+  get isTextInputDisabled() {
+    return (
+      this.isLoading ||
+      this.isRecording ||
+      this.hasVoiceAttachment
+    );
+  }
+
+  get filePickerAccept() {
+    return Object.values(ATTACHMENT_KIND_MAP)
+      .flat()
+      .map((ext) => `.${ext}`)
+      .join(',');
+  }
+
+  private isSpeechRecognitionSupported() {
+    return Boolean(
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition,
+    );
   }
 
   handleFloatingButtonClick(event: Event) {
@@ -1531,8 +1607,401 @@ export class RioAssistWidget extends LitElement {
     await this.processMessage(suggestion);
   }
 
+  private getAudioExtension(mimeType: string) {
+    const normalized = mimeType.toLowerCase();
+    if (normalized.includes('ogg')) {
+      return 'ogg';
+    }
+    if (normalized.includes('mpeg') || normalized.includes('mp3')) {
+      return 'mp3';
+    }
+    if (normalized.includes('wav')) {
+      return 'wav';
+    }
+    if (normalized.includes('mp4') || normalized.includes('m4a')) {
+      return 'm4a';
+    }
+    if (normalized.includes('webm')) {
+      return 'webm';
+    }
+    return 'webm';
+  }
+
+  private createAudioFile(blob: Blob) {
+    const extension = this.getAudioExtension(blob.type || 'audio/webm');
+    const filename = `mensagem-voz-${Date.now()}.${extension}`;
+    return new File([blob], filename, { type: blob.type || 'audio/webm' });
+  }
+
+  private clearVoiceRecorder() {
+    this.voiceRecordingChunks = [];
+    this.voiceTranscriptSegments = [];
+    this.voiceTranscriptPreview = '';
+    if (this.voiceRecorder) {
+      this.voiceRecorder.ondataavailable = null;
+      this.voiceRecorder.onstop = null;
+      this.voiceRecorder = null;
+    }
+  }
+
+  private cleanupVoiceStream() {
+    if (this.voiceRecordingStream) {
+      this.voiceRecordingStream.getTracks().forEach((track) => track.stop());
+      this.voiceRecordingStream = null;
+    }
+  }
+
+  private teardownVoiceRecording() {
+    if (this.voiceRecorder && this.voiceRecorder.state !== 'inactive') {
+      this.voiceRecorder.stop();
+    }
+    this.stopSpeechRecognition();
+    this.cleanupVoiceStream();
+    this.clearVoiceRecorder();
+    this.isRecording = false;
+    this.isRecordingPaused = false;
+  }
+
+  private async requestMicrophoneStream() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.errorMessage = 'Seu navegador nao suporta gravacao de audio.';
+      return null;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.microphonePermissionGranted = true;
+      return stream;
+    } catch (error) {
+      this.microphonePermissionGranted = false;
+      console.error('[RioAssist][voice] erro ao acessar microfone', error);
+      this.errorMessage = 'Nao foi possivel acessar o microfone.';
+      return null;
+    }
+  }
+
+  private createVoiceRecorder(stream: MediaStream) {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg',
+      'audio/mp4',
+    ];
+    const supported = candidates.find((type) =>
+      typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type),
+    );
+
+    return supported ? new MediaRecorder(stream, { mimeType: supported }) : new MediaRecorder(stream);
+  }
+
+  private startSpeechRecognition() {
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      this.speechRecognitionAvailable = false;
+      return;
+    }
+
+    this.stopSpeechRecognition();
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        const transcript = result[0]?.transcript ?? '';
+        if (result.isFinal) {
+          this.voiceTranscriptSegments.push(transcript.trim());
+        } else {
+          interim += transcript;
+        }
+      }
+      this.voiceTranscriptPreview = [...this.voiceTranscriptSegments, interim.trim()]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (this.voiceTranscriptPreview) {
+        console.info('[RioAssist][voice] transcricao parcial', this.voiceTranscriptPreview);
+      }
+    };
+    recognition.onstart = () => {
+      console.info('[RioAssist][voice] reconhecimento iniciado');
+    };
+    recognition.onaudiostart = () => {
+      console.info('[RioAssist][voice] audio captado (inicio)');
+    };
+    recognition.onaudioend = () => {
+      console.info('[RioAssist][voice] audio captado (fim)');
+    };
+    recognition.onsoundstart = () => {
+      console.info('[RioAssist][voice] som detectado');
+    };
+    recognition.onsoundend = () => {
+      console.info('[RioAssist][voice] som terminou');
+    };
+    recognition.onspeechstart = () => {
+      console.info('[RioAssist][voice] fala detectada');
+    };
+    recognition.onspeechend = () => {
+      console.info('[RioAssist][voice] fala terminou');
+    };
+    recognition.onnomatch = (event: any) => {
+      console.warn('[RioAssist][voice] fala nao reconhecida', event);
+    };
+    recognition.onend = () => {
+      console.info('[RioAssist][voice] reconhecimento encerrado', {
+        isRecording: this.isRecording,
+        isRecordingPaused: this.isRecordingPaused,
+      });
+      if (this.isRecording && !this.isRecordingPaused) {
+        try {
+          recognition.start();
+        } catch (error) {
+          console.warn('[RioAssist][voice] falha ao reiniciar reconhecimento', error);
+        }
+      }
+    };
+    recognition.onerror = (event: any) => {
+      const error = (event && event.error) || '';
+      console.error('[RioAssist][voice] erro no reconhecimento de voz', {
+        error,
+        message: event?.message ?? null,
+        event,
+      });
+      if (
+        error === 'not-allowed' ||
+        error === 'service-not-allowed' ||
+        error === 'not-supported'
+      ) {
+        this.speechRecognitionAvailable = false;
+      }
+    };
+    try {
+      recognition.start();
+      this.speechRecognizer = recognition;
+      this.speechRecognitionAvailable = true;
+    } catch (error) {
+      console.warn('[RioAssist][voice] nao foi possivel iniciar reconhecimento', error);
+      this.speechRecognizer = null;
+      this.speechRecognitionAvailable = false;
+    }
+  }
+
+  private stopSpeechRecognition() {
+    if (!this.speechRecognizer) {
+      return;
+    }
+
+    try {
+      this.speechRecognizer.onresult = null;
+      this.speechRecognizer.onerror = null;
+      this.speechRecognizer.onend = null;
+      this.speechRecognizer.stop();
+    } catch (error) {
+      console.warn('[RioAssist][voice] erro ao interromper reconhecimento', error);
+    }
+    this.speechRecognizer = null;
+  }
+
+  private stopVoiceRecorder() {
+    return new Promise<Blob | null>((resolve) => {
+      const recorder = this.voiceRecorder;
+      if (!recorder) {
+        resolve(null);
+        return;
+      }
+
+      const finalize = () => {
+        recorder.removeEventListener('stop', finalize);
+        const mimeType = recorder.mimeType || 'audio/webm';
+        const blob =
+          this.voiceRecordingChunks.length > 0
+            ? new Blob(this.voiceRecordingChunks, { type: mimeType })
+            : null;
+        resolve(blob);
+      };
+
+      recorder.addEventListener('stop', finalize);
+      if (recorder.state !== 'inactive') {
+        recorder.stop();
+      } else {
+        finalize();
+      }
+    });
+  }
+
+  private addVoiceAttachment(blob: Blob) {
+    if (!blob || blob.size === 0) {
+      return;
+    }
+    if (this.isAttachmentLimitReached) {
+      this.attachmentError = 'Voce pode anexar no maximo 3 arquivos.';
+      return;
+    }
+
+    const file = this.createAudioFile(blob);
+    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : this.randomId(12);
+
+    const transcript = this.voiceTranscriptSegments.join(' ').trim() || this.voiceTranscriptPreview;
+
+    const item: AttachmentItem = {
+      id,
+      file,
+      name: file.name,
+      typeLabel: ATTACHMENT_KIND_LABEL.audio,
+      kind: 'audio',
+    };
+
+    this.selectedFiles = [...this.selectedFiles, item];
+    this.voiceAttachmentId = id;
+    this.voiceTranscript = transcript.trim();
+    this.attachmentError = '';
+  }
+
+  async handleVoiceButtonClick() {
+    if (this.isVoiceButtonDisabled) {
+      return;
+    }
+
+    const stream = await this.requestMicrophoneStream();
+    if (!stream) {
+      return;
+    }
+
+    this.voiceRecordingStream = stream;
+    this.voiceRecordingChunks = [];
+    this.voiceTranscriptSegments = [];
+    this.voiceTranscriptPreview = '';
+    this.voiceTranscript = '';
+
+    const recorder = this.createVoiceRecorder(stream);
+    this.voiceRecorder = recorder;
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        this.voiceRecordingChunks.push(event.data);
+      }
+    };
+    recorder.onstop = () => {
+      this.cleanupVoiceStream();
+    };
+
+    recorder.start();
+    this.isRecording = true;
+    this.isRecordingPaused = false;
+    this.startSpeechRecognition();
+  }
+
+  private pauseVoiceRecording() {
+    if (!this.voiceRecorder || !this.isRecording || this.isRecordingPaused) {
+      return;
+    }
+
+    if (this.voiceRecorder.state === 'recording') {
+      this.voiceRecorder.pause();
+    }
+    this.isRecordingPaused = true;
+    this.stopSpeechRecognition();
+  }
+
+  private resumeVoiceRecording() {
+    if (!this.voiceRecorder || !this.isRecording || !this.isRecordingPaused) {
+      return;
+    }
+
+    if (this.voiceRecorder.state === 'paused') {
+      this.voiceRecorder.resume();
+    }
+    this.isRecordingPaused = false;
+    this.startSpeechRecognition();
+  }
+
+  handleVoiceCancelClick() {
+    if (!this.isRecording) {
+      return;
+    }
+
+    this.pauseVoiceRecording();
+    this.voiceCancelDialogMode = 'cancel';
+    this.pendingVoiceRemovalId = null;
+    this.voiceCancelDialogOpen = true;
+  }
+
+  async handleVoiceConfirmClick() {
+    if (!this.isRecording) {
+      return;
+    }
+
+    this.isRecording = false;
+    this.isRecordingPaused = false;
+    this.voiceCancelDialogOpen = false;
+    this.stopSpeechRecognition();
+    const blob = await this.stopVoiceRecorder();
+    this.cleanupVoiceStream();
+    if (blob) {
+      this.addVoiceAttachment(blob);
+    }
+    this.clearVoiceRecorder();
+  }
+
+  private async discardVoiceRecording() {
+    this.isRecording = false;
+    this.isRecordingPaused = false;
+    this.voiceCancelDialogOpen = false;
+    this.stopSpeechRecognition();
+    await this.stopVoiceRecorder();
+    this.cleanupVoiceStream();
+    this.clearVoiceRecorder();
+    this.voiceTranscript = '';
+  }
+
+  handleVoiceDialogConfirm() {
+    if (this.voiceCancelDialogMode === 'cancel') {
+      void this.discardVoiceRecording();
+      return;
+    }
+
+    const targetId = this.pendingVoiceRemovalId;
+    if (targetId) {
+      this.selectedFiles = this.selectedFiles.filter((item) => item.id !== targetId);
+      if (this.voiceAttachmentId === targetId) {
+        this.voiceAttachmentId = null;
+        this.voiceTranscript = '';
+      }
+      this.pendingVoiceRemovalId = null;
+    }
+    if (this.selectedFiles.length === 0) {
+      this.attachmentError = '';
+    }
+    this.voiceCancelDialogOpen = false;
+  }
+
+  handleVoiceDialogContinue() {
+    if (this.voiceCancelDialogMode === 'cancel') {
+      this.voiceCancelDialogOpen = false;
+      this.resumeVoiceRecording();
+      return;
+    }
+
+    this.voiceCancelDialogOpen = false;
+    this.pendingVoiceRemovalId = null;
+  }
+
+  handleVoiceAttachmentRemove(id: string) {
+    if (this.isRecording) {
+      return;
+    }
+
+    this.voiceCancelDialogMode = 'remove';
+    this.pendingVoiceRemovalId = id;
+    this.voiceCancelDialogOpen = true;
+  }
+
   handleFilePickerClick() {
-    if (this.isLoading) {
+    if (this.isFilePickerDisabled) {
       return;
     }
 
@@ -1588,6 +2057,10 @@ export class RioAssistWidget extends LitElement {
 
   handleAttachmentRemove(id: string) {
     const removed = this.selectedFiles.find((item) => item.id === id);
+    if (removed?.kind === 'audio') {
+      this.handleVoiceAttachmentRemove(id);
+      return;
+    }
     this.selectedFiles = this.selectedFiles.filter((item) => item.id !== id);
     if (removed?.previewUrl) {
       URL.revokeObjectURL(removed.previewUrl);
@@ -1599,6 +2072,9 @@ export class RioAssistWidget extends LitElement {
 
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
+    if (this.isRecording) {
+      return;
+    }
     this.consultantOptionsSuppressed = true;
     this.activeConsultantFollowUpId = null;
     this.activeConsultantPromptId = null;
@@ -1695,6 +2171,9 @@ export class RioAssistWidget extends LitElement {
           : undefined;
       await client.sendMessage(contentToSend, this.currentConversationId, extraPayload);
       if (options?.attachments?.length) {
+        const hadVoice =
+          this.voiceAttachmentId &&
+          options.attachments.some((item) => item.id === this.voiceAttachmentId);
         this.selectedFiles.forEach((item) => {
           if (item.previewUrl) {
             URL.revokeObjectURL(item.previewUrl);
@@ -1702,6 +2181,10 @@ export class RioAssistWidget extends LitElement {
         });
         this.selectedFiles = [];
         this.attachmentError = '';
+        if (hadVoice) {
+          this.voiceAttachmentId = null;
+          this.voiceTranscript = '';
+        }
       }
     } catch (error) {
       this.clearLoadingGuard();

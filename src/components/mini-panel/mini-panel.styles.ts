@@ -553,6 +553,10 @@ export const miniPanelStyles = css`
     background-color: #d64b4b;
   }
 
+  .attachment-card--audio .attachment-card__icon {
+    background-color: #1aa1a8;
+  }
+
   .attachment-card__meta {
     display: flex;
     flex-direction: column;
@@ -651,6 +655,21 @@ export const miniPanelStyles = css`
     width: 100%;
   }
 
+  .voice-recording-label {
+    flex: 1;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 18px;
+    color: #1f2f36;
+  }
+
+  .voice-recording-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   form {
     display: flex;
     align-items: center;
@@ -722,9 +741,46 @@ export const miniPanelStyles = css`
     height: 32px;
   }
 
+  .input-button--voice img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .input-button--voice-action img {
+    width: 32px;
+    height: 32px;
+  }
+
   .input-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .voice-transcript {
+    margin: 0;
+    padding: 0 6px;
+    font-size: 14px;
+    color: #1f2f36;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+  }
+
+  .voice-transcript--unavailable {
+    color: #8a98a4;
+    font-style: italic;
+  }
+
+  .voice-input-locked {
+    flex: 1;
+    min-height: 22px;
+    font-size: 14px;
+    color: #1f2f36;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-style: italic;
+    padding: 2px 0;
+  }
+
+  .voice-input-locked--error {
+    color: #d64b4b;
   }
 
   .footnote {
