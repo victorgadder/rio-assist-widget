@@ -1,5 +1,12 @@
 # Changelog
   
+## [0.2.0] - 2026-01-30
+- Adiciona gravacao de mensagens de voz com permissao de microfone e fluxo de pausa/confirmacao.
+- Exibe estado "Ouvindo..." no input com botoes de cancelar/confirmar e bloqueia a digitacao durante a gravacao.
+- Anexa audio gravado no input com card dedicado e bloqueia novo audio enquanto houver mensagem pendente.
+- Mostra transcricao gerada pela Web Speech API no lugar do input e trata indisponibilidade com aviso em vermelho.
+- Inclui logs detalhados do reconhecimento de voz para diagnostico (start/end/audio/som/fala/resultados).
+
 ## [0.1.60] - 2026-01-23
 - Corrige o horario das respostas no historico, evitando mostrar o horario atual ao recarregar conversas.
 - Exibe data relativa nas mensagens: "ontem" e dia da semana entre 2 e 5 dias, mantendo data completa depois.
