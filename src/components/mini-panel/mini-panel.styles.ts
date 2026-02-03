@@ -267,6 +267,31 @@ export const miniPanelStyles = css`
     line-height: 1.35;
   }
 
+  .message__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-top: 32px;
+  }
+
+  .message__action-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .message__action-button img {
+    width: 32px;
+    height: 32px;
+  }
+
   .consultant-follow-up {
     display: flex;
     flex-direction: column;

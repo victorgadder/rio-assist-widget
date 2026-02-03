@@ -1,27 +1,31 @@
-# Changelog
+﻿# Changelog
   
+## [0.2.1] - 2026-02-03
+- Adiciona linha de ações (curtir, não curtir, atualizar, compartilhar, copiar e mais opções) abaixo das respostas do agente.
+- Usa ícones 32x32 com espaçamento de 8px e margem de 32px abaixo do conteúdo da resposta no mini painel.
+
 ## [0.2.0] - 2026-01-30
-- Adiciona gravacao de mensagens de voz com permissao de microfone e fluxo de pausa/confirmacao.
-- Exibe estado "Ouvindo..." no input com botoes de cancelar/confirmar e bloqueia a digitacao durante a gravacao.
-- Anexa audio gravado no input com card dedicado e bloqueia novo audio enquanto houver mensagem pendente.
-- Mostra transcricao gerada pela Web Speech API no lugar do input e trata indisponibilidade com aviso em vermelho.
-- Inclui logs detalhados do reconhecimento de voz para diagnostico (start/end/audio/som/fala/resultados).
+- Adiciona gravação de mensagens de voz com permissão de microfone e fluxo de pausa/confirmação.
+- Exibe estado "Ouvindo..." no input com botões de cancelar/confirmar e bloqueia a digitação durante a gravação.
+- Anexa áudio gravado no input com card dedicado e bloqueia novo áudio enquanto houver mensagem pendente.
+- Mostra transcrição gerada pela Web Speech API no lugar do input e trata indisponibilidade com aviso em vermelho.
+- Inclui logs detalhados do reconhecimento de voz para diagnóstico (start/end/áudio/som/fala/resultados).
 
 ## [0.1.60] - 2026-01-23
-- Corrige o horario das respostas no historico, evitando mostrar o horario atual ao recarregar conversas.
+- Corrige o horário das respostas no histórico, evitando mostrar o horário atual ao recarregar conversas.
 - Exibe data relativa nas mensagens: "ontem" e dia da semana entre 2 e 5 dias, mantendo data completa depois.
 
 ## [0.1.59] - 2026-01-22
-- Oculta temporariamente o botao de anexos no input do chat.
+- Oculta temporariamente o botão de anexos no input do chat.
 
 ## [0.1.58] - 2026-01-21
-- Adiciona anexos no input do chat com validacao de tamanho/formato, exibicao de cards e miniaturas.
-- Inclui suporte a imagens (JPG/PNG) com miniaturas e botao de remocao dedicado.
-- Ajusta layout do input e anexos conforme prototipo (quebra de linha, icones, espacamentos e bordas).
-- Atualiza chat fullscreen para ocupar toda a largura util.
+- Adiciona anexos no input do chat com validação de tamanho/formato, exibição de cards e miniaturas.
+- Inclui suporte a imagens (JPG/PNG) com miniaturas e botão de remoção dedicado.
+- Ajusta layout do input e anexos conforme protótipo (quebra de linha, ícones, espaçamentos e bordas).
+- Atualiza chat fullscreen para ocupar toda a largura útil.
 
 ## [0.1.57] - 2026-01-19
-- Ajusta espacos e altura fixa dos itens na lista de conversas do sidebar.
+- Ajusta espaços e altura fixa dos itens na lista de conversas do sidebar.
 - Alinha itens da lista e scrollbar no mini painel para evitar cortes na rolagem.
 
 ## [0.1.56] - 2026-01-15

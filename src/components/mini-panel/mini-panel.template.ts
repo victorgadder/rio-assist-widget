@@ -20,6 +20,12 @@ const voiceRecoverIconUrl = new URL('../../assets/icons/voiceRecoverIcon.png', i
 const cancelVoiceIconUrl = new URL('../../assets/icons/cancelVoice.png', import.meta.url).href;
 const confirmVoiceIconUrl = new URL('../../assets/icons/confirmVoice.png', import.meta.url).href;
 const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
+const likeIconUrl = new URL('../../assets/icons/like.png', import.meta.url).href;
+const unlikeIconUrl = new URL('../../assets/icons/unlike.png', import.meta.url).href;
+const updateIconUrl = new URL('../../assets/icons/update.png', import.meta.url).href;
+const shareIconUrl = new URL('../../assets/icons/share.png', import.meta.url).href;
+const copyIconUrl = new URL('../../assets/icons/copyText.png', import.meta.url).href;
+const lineThreeDotsIconUrl = new URL('../../assets/icons/lineThreeDots.png', import.meta.url).href;
 
 const formatMessageTimestamp = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -193,6 +199,34 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                   ? renderConsultantPrompt(component, (message as any).consultantPrompt)
                   : unsafeHTML(message.html ?? message.text)}
             </div>
+            ${message.role === 'assistant'
+              ? html`
+                  <div class="message__actions" aria-label="Ações da resposta">
+                    <button class="message__action-button" type="button" aria-label="Curtir">
+                      <img src=${likeIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button class="message__action-button" type="button" aria-label="Não curtir">
+                      <img src=${unlikeIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button class="message__action-button" type="button" aria-label="Atualizar">
+                      <img src=${updateIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button class="message__action-button" type="button" aria-label="Compartilhar">
+                      <img src=${shareIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button class="message__action-button" type="button" aria-label="Copiar">
+                      <img src=${copyIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                    <button
+                      class="message__action-button"
+                      type="button"
+                      aria-label="Mais opções"
+                    >
+                      <img src=${lineThreeDotsIconUrl} alt="" aria-hidden="true" />
+                    </button>
+                  </div>
+                `
+              : null}
             <time>
               ${formatMessageTimestamp(message.timestamp)}
             </time>
