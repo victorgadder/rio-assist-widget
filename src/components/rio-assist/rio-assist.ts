@@ -52,6 +52,30 @@ export type ChatMessage = {
   text: string;
   html?: string;
   timestamp: number;
+  request?: {
+    text: string;
+    toSend: string;
+    consultantContext?: {
+      branchId: string | null;
+      branchLabel: string | null;
+      questionId: string;
+      questionLevel: string | null;
+    } | null;
+    isConsultantAgent?: boolean;
+  };
+  responseTo?: {
+    messageId: string;
+    requestText: string;
+    requestToSend: string;
+    consultantContext?: {
+      branchId: string | null;
+      branchLabel: string | null;
+      questionId: string;
+      questionLevel: string | null;
+    } | null;
+    isConsultantAgent?: boolean;
+  };
+  hidden?: boolean;
   consultantPrompt?: {
     id: string;
     text: string;
@@ -165,6 +189,8 @@ export class RioAssistWidget extends LitElement {
     lastConsultantPromptId: { type: String, state: true },
     lastConsultantFollowUpId: { type: String, state: true },
     lastConsultantFollowUpPayload: { attribute: false },
+    copiedMessageId: { type: String, state: true },
+    messageReactions: { attribute: false },
   };
 
   open = false;
@@ -414,6 +440,27 @@ export class RioAssistWidget extends LitElement {
 
   private loadingTimer: number | null = null;
 
+  copiedMessageId: string | null = null;
+
+  messageReactions: Record<string, 'like' | 'unlike'> = {};
+
+  private copiedMessageTimer: number | null = null;
+
+  private pendingResponseTo:
+    | {
+        messageId: string;
+        requestText: string;
+        requestToSend: string;
+        consultantContext?: {
+          branchId: string | null;
+          branchLabel: string | null;
+          questionId: string;
+          questionLevel: string | null;
+        } | null;
+        isConsultantAgent?: boolean;
+      }
+    | null = null;
+
   private currentConversationId: string | null = null;
 
   private conversationCounter = 0;
@@ -521,6 +568,10 @@ export class RioAssistWidget extends LitElement {
     if (this.conversationScrollbarRaf !== null) {
       cancelAnimationFrame(this.conversationScrollbarRaf);
       this.conversationScrollbarRaf = null;
+    }
+    if (this.copiedMessageTimer !== null) {
+      window.clearTimeout(this.copiedMessageTimer);
+      this.copiedMessageTimer = null;
     }
 
     this.selectedFiles.forEach((item) => {
@@ -2070,6 +2121,100 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
+  private dispatchMessageAction(kind: string, message: ChatMessage) {
+    this.dispatchEvent(
+      new CustomEvent(`rioassist:message-${kind}`, {
+        detail: {
+          messageId: message.id,
+          role: message.role,
+          text: message.text,
+          conversationId: this.currentConversationId,
+          responseTo: message.responseTo ?? null,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private setCopiedMessage(messageId: string) {
+    if (this.copiedMessageTimer !== null) {
+      window.clearTimeout(this.copiedMessageTimer);
+      this.copiedMessageTimer = null;
+    }
+    this.copiedMessageId = messageId;
+    this.copiedMessageTimer = window.setTimeout(() => {
+      this.copiedMessageId = null;
+      this.copiedMessageTimer = null;
+    }, 1200);
+  }
+
+  async handleCopyMessage(message: ChatMessage) {
+    const content = message.text.trim();
+    if (!content) {
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = content;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      this.setCopiedMessage(message.id);
+      this.dispatchMessageAction('copy', message);
+    } catch (error) {
+      console.error('[RioAssist] falha ao copiar mensagem', error);
+    }
+  }
+
+  handleUpdateResponse(message: ChatMessage) {
+    if (this.isLoading || !message.responseTo) {
+      return;
+    }
+
+    this.messages = this.messages.map((entry) =>
+      entry.id === message.id ? { ...entry, hidden: true } : entry,
+    );
+
+    void this.processMessage(message.responseTo.requestText, {
+      suppressUserMessage: true,
+      responseToMessageId: message.responseTo.messageId,
+      forcePayload: {
+        contentToSend: message.responseTo.requestToSend,
+        contentToDisplay: message.responseTo.requestText,
+      },
+      consultantContext: message.responseTo.consultantContext ?? null,
+      isConsultantAgent: message.responseTo.isConsultantAgent ?? false,
+    });
+
+    this.dispatchMessageAction('update', message);
+  }
+
+  handleToggleReaction(kind: 'like' | 'unlike', message: ChatMessage) {
+    const current = this.messageReactions[message.id];
+    const next = current === kind ? undefined : kind;
+    const updated = { ...this.messageReactions };
+    if (next) {
+      updated[message.id] = next;
+    } else {
+      delete updated[message.id];
+    }
+    this.messageReactions = updated;
+    this.dispatchMessageAction(kind, message);
+  }
+
+  handleMessageAction(kind: 'share' | 'more', message: ChatMessage) {
+    this.dispatchMessageAction(kind, message);
+  }
+
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     if (this.isRecording) {
@@ -2086,6 +2231,11 @@ export class RioAssistWidget extends LitElement {
     role: ChatRole,
     text: string,
     consultantFollowUp?: ChatMessage['consultantFollowUp'],
+    options?: {
+      request?: ChatMessage['request'];
+      responseTo?: ChatMessage['responseTo'];
+      hidden?: boolean;
+    },
   ): ChatMessage {
     const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -2097,6 +2247,9 @@ export class RioAssistWidget extends LitElement {
       text,
       html: this.renderMarkdown(text),
       timestamp: Date.now(),
+      request: options?.request,
+      responseTo: options?.responseTo,
+      hidden: options?.hidden,
       consultantFollowUp,
     };
   }
@@ -2112,6 +2265,11 @@ export class RioAssistWidget extends LitElement {
       } | null;
       isConsultantAgent?: boolean;
       suppressUserMessage?: boolean;
+      responseToMessageId?: string;
+      forcePayload?: {
+        contentToSend: string;
+        contentToDisplay: string;
+      };
       attachments?: AttachmentItem[];
     } | null = null,
   ) {
@@ -2120,10 +2278,11 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const contentToSend = this.shortAnswerEnabled
-      ? `Quero uma resposta curta sobre: ${content}`
-      : content;
-    const contentToDisplay = content;
+    const contentToSend = options?.forcePayload?.contentToSend ??
+      (this.shortAnswerEnabled
+        ? `Quero uma resposta curta sobre: ${content}`
+        : content);
+    const contentToDisplay = options?.forcePayload?.contentToDisplay ?? content;
 
     if (!this.currentConversationId) {
       this.currentConversationId = null;
@@ -2147,9 +2306,33 @@ export class RioAssistWidget extends LitElement {
       }),
     );
 
+    const requestPayload: ChatMessage['request'] = {
+      text: contentToDisplay,
+      toSend: contentToSend,
+      consultantContext: options?.consultantContext ?? null,
+      isConsultantAgent: options?.isConsultantAgent ?? false,
+    };
+
     if (!options?.suppressUserMessage) {
-      const userMessage = this.createMessage('user', contentToDisplay);
+      const userMessage = this.createMessage('user', contentToDisplay, undefined, {
+        request: requestPayload,
+      });
       this.messages = [...this.messages, userMessage];
+      this.pendingResponseTo = {
+        messageId: userMessage.id,
+        requestText: requestPayload.text,
+        requestToSend: requestPayload.toSend,
+        consultantContext: requestPayload.consultantContext ?? null,
+        isConsultantAgent: requestPayload.isConsultantAgent ?? false,
+      };
+    } else {
+      this.pendingResponseTo = {
+        messageId: options?.responseToMessageId ?? 'resend',
+        requestText: requestPayload.text,
+        requestToSend: requestPayload.toSend,
+        consultantContext: requestPayload.consultantContext ?? null,
+        isConsultantAgent: requestPayload.isConsultantAgent ?? false,
+      };
     }
     if (wasEmptyConversation) {
       this.showNewConversationShortcut = true;
@@ -2187,6 +2370,7 @@ export class RioAssistWidget extends LitElement {
         }
       }
     } catch (error) {
+      this.pendingResponseTo = null;
       this.clearLoadingGuard();
       this.isLoading = false;
       this.errorMessage = error instanceof Error
@@ -2290,8 +2474,20 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const assistantMessage = this.createMessage('assistant', message.text);
+    const responseTo = this.pendingResponseTo
+      ? {
+          messageId: this.pendingResponseTo.messageId,
+          requestText: this.pendingResponseTo.requestText,
+          requestToSend: this.pendingResponseTo.requestToSend,
+          consultantContext: this.pendingResponseTo.consultantContext ?? null,
+          isConsultantAgent: this.pendingResponseTo.isConsultantAgent ?? false,
+        }
+      : undefined;
+    const assistantMessage = this.createMessage('assistant', message.text, undefined, {
+      responseTo,
+    });
     this.messages = [...this.messages, assistantMessage];
+    this.pendingResponseTo = null;
     this.clearLoadingGuard();
     this.isLoading = false;
 
