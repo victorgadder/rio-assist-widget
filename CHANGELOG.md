@@ -1,5 +1,15 @@
-﻿# Changelog
-  
+# Changelog
+
+## [0.2.2] - 2026-02-27
+- Adiciona novas parametrizações por projeto para o botão flutuante (ícone principal, label e fundo), mantendo fallback para os assets atuais.
+- Torna o título do widget parametrizável e consistente no mini painel e no modo fullscreen.
+- Torna parametrizáveis o texto do botão do Consultant Agent e a mensagem inicial do fluxo.
+- Adiciona `autoStartConsultantFlow` para abrir o mini painel já iniciando o fluxo do Consultant Agent ao clicar no botão flutuante.
+- No modo `autoStartConsultantFlow`, o botão de nova conversa (`+`) passa a reiniciar o fluxo do Consultant Agent.
+- No modo `autoStartConsultantFlow`, a caixa de digitação de texto fica desabilitada.
+- Adiciona `showConsultantAgentButton` para exibir/ocultar o botão "Consulte o UptAIme Agent" por projeto.
+- Atualiza a documentação (`README`) com todos os novos parâmetros e exemplos de configuração via `init` e `data-*`.
+
 ## [0.2.1] - 2026-02-03
 - Adiciona linha de ações (curtir, não curtir, atualizar, compartilhar, copiar e mais opções) abaixo das respostas do agente.
 - Usa ícones 32x32 com espaçamento de 8px e margem de 32px abaixo do conteúdo da resposta no mini painel.

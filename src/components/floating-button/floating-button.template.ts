@@ -6,7 +6,13 @@ const buttonIconUrl = new URL('../../assets/icons/iaButtonIcon.png', import.meta
 const buttonLabelUrl = new URL('../../assets/icons/buttonLabel.png', import.meta.url).href;
 const boxBackgroundUrl = new URL('../../assets/icons/boxBackground.png', import.meta.url).href;
 
-export const renderFloatingButton = (component: RioAssistWidget) => html`
+export const renderFloatingButton = (component: RioAssistWidget) => {
+  const iconUrl = component.floatingButtonIconUrl.trim() || buttonIconUrl;
+  const labelIconUrl = component.floatingButtonLabelIconUrl.trim() || buttonLabelUrl;
+  const backgroundIconUrl =
+    component.floatingButtonBackgroundIconUrl.trim() || boxBackgroundUrl;
+
+  return html`
   <button
     class="floating-button"
     style=${styleMap({
@@ -22,17 +28,18 @@ export const renderFloatingButton = (component: RioAssistWidget) => html`
   >
     <img
       class="floating-button__box-bg"
-      src=${boxBackgroundUrl}
+      src=${backgroundIconUrl}
       alt=""
       aria-hidden="true"
     />
     <span class="floating-button__content">
-      <img class="floating-button__icon" src=${buttonIconUrl} alt="" aria-hidden="true" />
+      <img class="floating-button__icon" src=${iconUrl} alt="" aria-hidden="true" />
       <img
         class="floating-button__label-image"
-        src=${buttonLabelUrl}
+        src=${labelIconUrl}
         alt=${component.buttonLabel}
       />
     </span>
   </button>
 `;
+};

@@ -4,17 +4,27 @@ export type RioAssistOptions = {
   target?: HTMLElement;
   title?: string;
   buttonLabel?: string;
+  floatingButtonIconUrl?: string;
+  floatingButtonLabelIconUrl?: string;
+  floatingButtonBackgroundIconUrl?: string;
   placeholder?: string;
   suggestions?: string[];
   accentColor?: string;
   apiBaseUrl?: string;
   rioToken?: string;
   floatingOffset?: number;
+  consultantAgentButtonText?: string;
+  showConsultantAgentButton?: boolean;
+  consultantAgentInitialMessage?: string;
+  autoStartConsultantFlow?: boolean;
 };
 
 const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   title: 'UptAIme Assist',
   buttonLabel: 'Uptaime Assist',
+  floatingButtonIconUrl: '',
+  floatingButtonLabelIconUrl: '',
+  floatingButtonBackgroundIconUrl: '',
   placeholder: 'Pergunte alguma coisa',
   suggestions: [
     'Resumo da Frota',
@@ -31,6 +41,11 @@ const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   apiBaseUrl: '',
   rioToken: '',
   floatingOffset: 32,
+  consultantAgentButtonText: 'Consulte o UptAIme Agent',
+  showConsultantAgentButton: true,
+  consultantAgentInitialMessage:
+    'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Para iniciar, estou te enviando o resumo da sua frota.',
+  autoStartConsultantFlow: false,
 };
 
 const widgetTagName = 'rio-assist-widget';
@@ -65,8 +80,18 @@ function ensureElement(options: RioAssistOptions = {}) {
       return;
     }
 
+    const attributeName = `data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    if (typeof value === 'boolean') {
+      if (value) {
+        widget?.setAttribute(attributeName, 'true');
+      } else {
+        widget?.removeAttribute(attributeName);
+      }
+      return;
+    }
+
     widget?.setAttribute(
-      `data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`,
+      attributeName,
       Array.isArray(value) ? value.join('|') : String(value),
     );
   });

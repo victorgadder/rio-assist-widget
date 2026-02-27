@@ -3,16 +3,21 @@ import type { RioAssistWidget } from '../components/rio-assist/rio-assist';
 
 export const renderConsultantAgentHero = (component: RioAssistWidget) => {
   const { consultantAgentVisible, consultantAgentIntro, consultantAgentOptions } = component;
+  const buttonText = component.consultantAgentButtonText.trim() || 'Consulte o UptAIme Agent';
 
   return html`
     <div class="consultant-agent">
-      <button
-        class="consultant-agent__button"
-        type="button"
-        @click=${() => component.handleConsultantAgentOpen()}
-      >
-        Consulte o UptAIme Agent
-      </button>
+      ${component.showConsultantAgentButton
+        ? html`
+            <button
+              class="consultant-agent__button"
+              type="button"
+              @click=${() => component.handleConsultantAgentOpen()}
+            >
+              ${buttonText}
+            </button>
+          `
+        : null}
 
       ${consultantAgentVisible
         ? html`

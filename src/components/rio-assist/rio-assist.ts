@@ -45,6 +45,9 @@ const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
   image: 'Imagem',
   audio: 'Mensagem de audio',
 };
+const DEFAULT_CONSULTANT_AGENT_BUTTON_TEXT = 'Consulte o UptAIme Agent';
+const DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE =
+  'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Para iniciar, estou te enviando o resumo da sua frota.';
 
 export type ChatMessage = {
   id: string;
@@ -140,6 +143,9 @@ export class RioAssistWidget extends LitElement {
     message: { type: String, state: true },
     titleText: { type: String, attribute: 'data-title' },
     buttonLabel: { type: String, attribute: 'data-button-label' },
+    floatingButtonIconUrl: { type: String, attribute: 'data-floating-button-icon-url' },
+    floatingButtonLabelIconUrl: { type: String, attribute: 'data-floating-button-label-icon-url' },
+    floatingButtonBackgroundIconUrl: { type: String, attribute: 'data-floating-button-background-icon-url' },
     placeholder: { type: String, attribute: 'data-placeholder' },
     accentColor: { type: String, attribute: 'data-accent-color' },
     apiBaseUrl: { type: String, attribute: 'data-api-base-url' },
@@ -178,6 +184,25 @@ export class RioAssistWidget extends LitElement {
     floatingButtonOffset: { type: Number, attribute: 'data-floating-offset' },
   consultantAgentVisible: { type: Boolean, state: true },
   consultantAgentIntro: { type: String, state: true },
+  consultantAgentButtonText: { type: String, attribute: 'data-consultant-agent-button-text' },
+  showConsultantAgentButton: {
+    attribute: 'data-show-consultant-agent-button',
+    converter: {
+      fromAttribute: (value: string | null) => value === null || value === '' || value === 'true',
+      toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+    },
+  },
+  consultantAgentInitialMessage: {
+    type: String,
+    attribute: 'data-consultant-agent-initial-message',
+  },
+  autoStartConsultantFlow: {
+    attribute: 'data-auto-start-consultant-flow',
+    converter: {
+      fromAttribute: (value: string | null) => value === '' || value === 'true',
+      toAttribute: (value: boolean) => (value ? 'true' : 'false'),
+    },
+  },
   consultantAgentOptions: { attribute: false, state: true },
     showSuggestions: { type: Boolean, state: true },
     activeConsultantFollowUpId: { type: String, state: true },
@@ -218,6 +243,12 @@ export class RioAssistWidget extends LitElement {
   titleText = 'UptAIme Assist';
 
   buttonLabel = 'Uptaime Assist';
+
+  floatingButtonIconUrl = '';
+
+  floatingButtonLabelIconUrl = '';
+
+  floatingButtonBackgroundIconUrl = '';
 
   placeholder = 'Pergunte alguma coisa';
 
@@ -290,6 +321,14 @@ export class RioAssistWidget extends LitElement {
   consultantAgentVisible = false;
 
   consultantAgentIntro = CONSULTANT_AGENT_INTRO;
+
+  consultantAgentButtonText = DEFAULT_CONSULTANT_AGENT_BUTTON_TEXT;
+
+  showConsultantAgentButton = true;
+
+  consultantAgentInitialMessage = DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE;
+
+  autoStartConsultantFlow = false;
 
   consultantAgentOptions: ConsultantAgentOption[] = [];
 
@@ -636,6 +675,7 @@ export class RioAssistWidget extends LitElement {
 
   get isTextInputDisabled() {
     return (
+      this.autoStartConsultantFlow ||
       this.isLoading ||
       this.isRecording ||
       this.hasVoiceAttachment
@@ -661,7 +701,12 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    const willOpenMiniPanel = !this.open && !this.isFullscreen;
     this.togglePanel();
+
+    if (this.autoStartConsultantFlow && willOpenMiniPanel && !this.hasActiveConversation) {
+      this.handleConsultantAgentOpen();
+    }
   }
 
   handleFloatingButtonPointerDown(event: PointerEvent) {
@@ -787,7 +832,7 @@ export class RioAssistWidget extends LitElement {
 
     const introMessage = this.createMessage(
       'assistant',
-      'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Para iniciar, estou te enviando o resumo da sua frota.',
+      this.consultantAgentInitialMessage.trim() || DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE,
     );
     this.messages = [...this.messages, introMessage];
     this.consultantAgentStage = 'awaiting';
@@ -1464,6 +1509,12 @@ export class RioAssistWidget extends LitElement {
 
   handleCreateConversation() {
     if (!this.hasActiveConversation) {
+      return;
+    }
+
+    if (this.autoStartConsultantFlow) {
+      this.startNewConversation();
+      this.handleConsultantAgentOpen();
       return;
     }
 

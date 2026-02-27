@@ -39,6 +39,52 @@ Widget lateral do UptAIme Assist embalado como Web Component. Ao receber o token
 
 O metodo `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. Todos os parametros sao opcionais, mas `rioToken` precisa ser preenchido para conectar ao websocket.
 
+## Parametrizacoes por projeto
+Se nenhum parametro abaixo for informado, o widget mantem o comportamento e os visuais atuais como padrao.
+
+- `floatingButtonIconUrl`: icone principal do botao flutuante.
+- `floatingButtonLabelIconUrl`: imagem/label do botao flutuante.
+- `floatingButtonBackgroundIconUrl`: imagem de fundo do botao flutuante.
+- `title`: titulo exibido no mini painel e no modo tela cheia.
+- `consultantAgentButtonText`: texto do botao "Consulte o UptAIme Agent".
+- `showConsultantAgentButton`: controla se o botao "Consulte o UptAIme Agent" sera exibido (`true` ou `false`).
+- `consultantAgentInitialMessage`: primeira mensagem enviada ao iniciar o fluxo do agente.
+- `autoStartConsultantFlow`: quando `true`, ao abrir pelo botao flutuante o mini painel ja inicia o fluxo do agente consultor. Nesse modo, o botao de `+` reinicia esse mesmo fluxo, sem abrir a confirmacao de "nova conversa".
+
+Exemplo:
+
+```html
+<script>
+  window.RioAssist.init({
+    rioToken: '<TOKEN_RIO>',
+    title: 'Meu Assistente',
+    floatingButtonIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/icon.png',
+    floatingButtonLabelIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/label.png',
+    floatingButtonBackgroundIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/bg.png',
+    consultantAgentButtonText: 'Falar com especialista',
+    showConsultantAgentButton: true,
+    consultantAgentInitialMessage:
+      'Sou o agente especialista deste projeto. Vou iniciar com um resumo da sua operacao.',
+    autoStartConsultantFlow: true,
+  });
+</script>
+```
+
+Tambem e possivel configurar via atributos `data-*` no elemento:
+
+```html
+<rio-assist-widget
+  data-title="Meu Assistente"
+  data-consultant-agent-button-text="Falar com especialista"
+  data-show-consultant-agent-button="true"
+  data-consultant-agent-initial-message="Sou o agente especialista deste projeto. Vou iniciar com um resumo da sua operacao."
+  data-floating-button-icon-url="https://cdn.exemplo.com/icones/projeto-a/icon.png"
+  data-floating-button-label-icon-url="https://cdn.exemplo.com/icones/projeto-a/label.png"
+  data-floating-button-background-icon-url="https://cdn.exemplo.com/icones/projeto-a/bg.png"
+  data-auto-start-consultant-flow="true"
+></rio-assist-widget>
+```
+
 ## Integracao com apps (React/Angular/Vanilla)
 1. Instale:
    ```bash
