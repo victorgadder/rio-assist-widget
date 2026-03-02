@@ -12,13 +12,10 @@ import type {
 const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', import.meta.url).href;
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
 const iaCentralIconUrl = new URL('../../assets/icons/iaCentralIcon.png', import.meta.url).href;
-const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
 const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', import.meta.url).href;
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
 const voiceRecoverIconUrl = new URL('../../assets/icons/voiceRecoverIcon.png', import.meta.url).href;
-const cancelVoiceIconUrl = new URL('../../assets/icons/cancelVoice.png', import.meta.url).href;
-const confirmVoiceIconUrl = new URL('../../assets/icons/confirmVoice.png', import.meta.url).href;
 const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
 const likeIconUrl = new URL('../../assets/icons/like.png', import.meta.url).href;
 const unlikeIconUrl = new URL('../../assets/icons/unlike.png', import.meta.url).href;
@@ -401,91 +398,23 @@ export const renderChatSurface = (component: RioAssistWidget) => {
           ${component.attachmentError
             ? html`<p class="attachment-error">${component.attachmentError}</p>`
             : null}
-          <input
-            class="file-input"
-            type="file"
-            accept=${component.filePickerAccept}
-            multiple
-            ?disabled=${component.isFilePickerDisabled}
-            @change=${(event: Event) => component.handleFileInputChange(event)}
-          />
+          <!-- Controles de anexo temporariamente ocultos (backend ainda sem suporte). -->
           <div class="input-row">
-            <button
-              class="input-button input-button--file"
-              type="button"
-              aria-label="Anexar arquivos"
-              @click=${() => component.handleFilePickerClick()}
-              ?disabled=${component.isFilePickerDisabled}
-            >
-              <img src=${plusFileSelectionUrl} alt="" aria-hidden="true" />
-            </button>
-            ${component.isRecording
-              ? html`<span class="voice-recording-label">Ouvindo...</span>`
-              : component.hasVoiceAttachment
-                ? html`
-                    <div
-                      class=${classMap({
-                        'voice-input-locked': true,
-                        'voice-input-locked--error': !component.voiceTranscript,
-                      })}
-                      aria-live="polite"
-                    >
-                      ${component.voiceTranscript
-                        ? html`${component.voiceTranscript}`
-                        : component.speechRecognitionAvailable
-                          ? html`Não foi possível gerar a transcrição desta mensagem.`
-                          : html`
-                              A transcrição não foi possível pois a ferramenta não está disponível no seu navegador
-                            `}
-                    </div>
-                  `
-                : html`
-                    <textarea
-                      class="composer-input"
-                      rows="1"
-                      placeholder=${component.placeholder}
-                      .value=${component.message}
-                      @input=${(event: InputEvent) => component.handleComposerInput(event)}
-                      @keydown=${(event: KeyboardEvent) => component.handleComposerKeydown(event)}
-                      ?disabled=${component.isTextInputDisabled}
-                    ></textarea>
-                `}
-            ${component.isRecording
-              ? html`
-                  <div class="voice-recording-actions">
-                    <button
-                      class="input-button input-button--voice-action"
-                      type="button"
-                      aria-label="Cancelar gravação"
-                      @click=${() => component.handleVoiceCancelClick()}
-                    >
-                      <img src=${cancelVoiceIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class="input-button input-button--voice-action"
-                      type="button"
-                      aria-label="Confirmar gravação"
-                      @click=${() => component.handleVoiceConfirmClick()}
-                    >
-                      <img src=${confirmVoiceIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                  </div>
-                `
-              : null}
-            <button
-              class="input-button input-button--voice"
-              type="button"
-              aria-label="Gravar mensagem de voz"
-              @click=${() => component.handleVoiceButtonClick()}
-              ?disabled=${component.isVoiceButtonDisabled}
-            >
-              <img src=${voiceRecoverIconUrl} alt="" aria-hidden="true" />
-            </button>
+            <textarea
+              class="composer-input"
+              rows="1"
+              placeholder=${component.placeholder}
+              .value=${component.message}
+              @input=${(event: InputEvent) => component.handleComposerInput(event)}
+              @keydown=${(event: KeyboardEvent) => component.handleComposerKeydown(event)}
+              ?disabled=${component.isTextInputDisabled}
+            ></textarea>
+            <!-- Controles de audio temporariamente ocultos (backend ainda sem suporte). -->
             <button
               class="input-button submit-button"
               type="submit"
               aria-label="Enviar mensagem"
-              ?disabled=${component.isLoading || component.isRecording}
+              ?disabled=${component.isLoading}
             >
               <img src=${arrowButtonUrl} alt="" aria-hidden="true" />
             </button>

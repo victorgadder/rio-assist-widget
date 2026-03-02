@@ -798,6 +798,7 @@ export const miniPanelStyles = css`
     line-height: 1.35;
     overflow: hidden;
     min-height: 22px;
+    padding: 0px 0;
   }
 
   form input::placeholder,
