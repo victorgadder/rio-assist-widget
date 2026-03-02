@@ -752,7 +752,7 @@ export const miniPanelStyles = css`
     align-items: center;
     gap: 12px;
     border: 1px solid #a4afbb;
-    border-radius: 80px;
+    border-radius: 28px;
     padding: 8px 8px 8px 16px;
     background: #fff;
     width: 100%;
@@ -761,6 +761,7 @@ export const miniPanelStyles = css`
     min-height: 56px;
     height: auto;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
   .input-shell--has-attachments {
@@ -796,8 +797,9 @@ export const miniPanelStyles = css`
     resize: none;
     background: transparent;
     line-height: 1.35;
-    overflow: hidden;
+    overflow-y: hidden;
     min-height: 22px;
+    max-height: 280px;
     padding: 0px 0;
   }
 

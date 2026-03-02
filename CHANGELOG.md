@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.5] - 2026-03-02
+- Suaviza o `border-radius` da moldura do composer para evitar distorcao visual em mensagens longas.
+- Impede overflow visual do conteúdo com `overflow: hidden` na moldura do input.
+- Define limite de altura do composer e ativa rolagem interna ao ultrapassar o limite, evitando que a caixa avance para fora da tela.
+
 ## [0.2.4] - 2026-03-02
 - Oculta temporariamente os controles de anexo e audio no composer, mantendo apenas o envio de texto para o agente.
 - Ajusta o alinhamento visual do placeholder do campo de digitacao.

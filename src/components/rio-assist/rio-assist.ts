@@ -17,6 +17,7 @@ import {
 } from '../../consultant-agent/consultant-agent';
 
 type ChatRole = 'user' | 'assistant';
+const COMPOSER_MAX_HEIGHT_PX = 280;
 
 type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image' | 'audio';
 
@@ -2318,7 +2319,9 @@ export class RioAssistWidget extends LitElement {
 
   private resizeComposer(textarea: HTMLTextAreaElement) {
     textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    const nextHeight = Math.min(textarea.scrollHeight, COMPOSER_MAX_HEIGHT_PX);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > COMPOSER_MAX_HEIGHT_PX ? 'auto' : 'hidden';
   }
 
   private syncComposerHeight() {
