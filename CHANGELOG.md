@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.6] - 2026-03-02
+- Corrige regressao no template do mini painel que impedia o envio de mensagens e o clique nas sugestoes.
+- Restaura a referencia do icone utilizado no cabecalho (plusFileSelectionUrl), evitando erro de runtime no render.
+
 ## [0.2.5] - 2026-03-02
 - Suaviza o `border-radius` da moldura do composer para evitar distorcao visual em mensagens longas.
 - Impede overflow visual do conteúdo com `overflow: hidden` na moldura do input.

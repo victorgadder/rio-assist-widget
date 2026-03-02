@@ -12,6 +12,7 @@ import type {
 const hamburgerIconUrl = new URL('../../assets/icons/hamburgerMenuIcon.png', import.meta.url).href;
 const expandIconUrl = new URL('../../assets/icons/expandScreen.png', import.meta.url).href;
 const iaCentralIconUrl = new URL('../../assets/icons/iaCentralIcon.png', import.meta.url).href;
+const plusFileSelectionUrl = new URL('../../assets/icons/plusFileSelection.png', import.meta.url).href;
 const closeIconUrl = new URL('../../assets/icons/closeIcon.png', import.meta.url).href;
 const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', import.meta.url).href;
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
