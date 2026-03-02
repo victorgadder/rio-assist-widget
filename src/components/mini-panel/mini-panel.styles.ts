@@ -381,6 +381,13 @@ export const miniPanelStyles = css`
     border-radius: 6px;
   }
 
+  .message__content pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+  }
+
   .message__content blockquote {
     border-left: 3px solid #cfd6dc;
     margin: 6px 0;
@@ -751,7 +758,8 @@ export const miniPanelStyles = css`
     width: 100%;
     max-width: 520px;
     margin-bottom: 0;
-    height: 56px;
+    min-height: 56px;
+    height: auto;
     box-sizing: border-box;
   }
 
@@ -772,7 +780,8 @@ export const miniPanelStyles = css`
     display: none;
   }
 
-  form input {
+  form input,
+  form textarea {
     border: none;
     flex: 1;
     font: inherit;
@@ -783,7 +792,16 @@ export const miniPanelStyles = css`
     font-weight: 400;
   }
 
-  form input::placeholder {
+  form textarea {
+    resize: none;
+    background: transparent;
+    line-height: 1.35;
+    overflow: hidden;
+    min-height: 22px;
+  }
+
+  form input::placeholder,
+  form textarea::placeholder {
     font-style: italic;
     font-size: 16px;
     color: #a7afbb;

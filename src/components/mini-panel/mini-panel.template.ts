@@ -440,16 +440,16 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                     </div>
                   `
                 : html`
-                    <input
-                      type="text"
+                    <textarea
+                      class="composer-input"
+                      rows="1"
                       placeholder=${component.placeholder}
                       .value=${component.message}
-                      @input=${(event: InputEvent) => {
-                        component.message = (event.target as HTMLInputElement).value;
-                      }}
+                      @input=${(event: InputEvent) => component.handleComposerInput(event)}
+                      @keydown=${(event: KeyboardEvent) => component.handleComposerKeydown(event)}
                       ?disabled=${component.isTextInputDisabled}
-                    />
-                  `}
+                    ></textarea>
+                `}
             ${component.isRecording
               ? html`
                   <div class="voice-recording-actions">

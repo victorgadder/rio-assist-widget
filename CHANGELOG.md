@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3] - 2026-03-02
+- Corrige renderizacao de code block no markdown para evitar fundo interno branco em blocos escuros (`pre code`).
+- Suporta composer multiline com `Shift+Enter` para quebra de linha e `Enter` para envio.
+- Troca o campo de digitacao de `input` para `textarea` e ajusta estilos para crescimento vertical.
+- Implementa autoajuste de altura do composer sem barra de rolagem interna.
+- Corrige sincronizacao de altura ao alternar mini/fullscreen, ajustando todos os composers renderizados imediatamente.
+
 ## [0.2.2] - 2026-02-27
 - Adiciona novas parametrizações por projeto para o botão flutuante (ícone principal, label e fundo), mantendo fallback para os assets atuais.
 - Torna o título do widget parametrizável e consistente no mini painel e no modo fullscreen.

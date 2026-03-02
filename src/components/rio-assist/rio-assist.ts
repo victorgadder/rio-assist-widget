@@ -595,10 +595,24 @@ export class RioAssistWidget extends LitElement {
     ) {
       this.scrollConversationToBottom();
     }
+
+    if (
+      changedProperties.has('message') ||
+      changedProperties.has('isRecording') ||
+      changedProperties.has('selectedFiles') ||
+      changedProperties.has('isFullscreen') ||
+      changedProperties.has('showConversations') ||
+      changedProperties.has('open')
+    ) {
+      this.syncComposerHeight();
+      requestAnimationFrame(() => this.syncComposerHeight());
+    }
   }
 
   protected firstUpdated(): void {
     this.enqueueConversationScrollbarMeasure();
+    this.syncComposerHeight();
+    requestAnimationFrame(() => this.syncComposerHeight());
     void this.bootstrapConsultantAgent();
   }
 
@@ -2266,16 +2280,57 @@ export class RioAssistWidget extends LitElement {
     this.dispatchMessageAction(kind, message);
   }
 
+  handleComposerKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    void this.submitCurrentMessage();
+  }
+
+  handleComposerInput(event: InputEvent) {
+    const textarea = event.target as HTMLTextAreaElement | null;
+    if (!textarea) {
+      return;
+    }
+
+    this.message = textarea.value;
+    this.resizeComposer(textarea);
+  }
+
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
+    await this.submitCurrentMessage();
+  }
+
+  private async submitCurrentMessage() {
     if (this.isRecording) {
       return;
     }
+
     this.consultantOptionsSuppressed = true;
     this.activeConsultantFollowUpId = null;
     this.activeConsultantPromptId = null;
     this.pendingConsultantFollowUpId = null;
     await this.processMessage(this.message, { attachments: this.selectedFiles });
+  }
+
+  private resizeComposer(textarea: HTMLTextAreaElement) {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  private syncComposerHeight() {
+    const textareas = Array.from(
+      this.renderRoot.querySelectorAll('.composer-input'),
+    ) as HTMLTextAreaElement[];
+
+    if (textareas.length === 0) {
+      return;
+    }
+
+    textareas.forEach((textarea) => this.resizeComposer(textarea));
   }
 
   private createMessage(
