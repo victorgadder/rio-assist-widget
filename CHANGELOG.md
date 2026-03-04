@@ -1,24 +1,29 @@
-# Changelog
+﻿# Changelog
+
+## [0.2.7] - 2026-03-04
+- Modula a barra de ações das respostas em template dedicado (`message-actions.template.ts`) para facilitar manutenção.
+- Modula os estilos da barra de ações em arquivo separado (`message-actions.styles.ts`) e integra no agregador global de estilos.
+- Oculta temporariamente a barra de ações por feature toggle (`MESSAGE_ACTIONS_VISIBLE = false`) enquanto o backend das ações não estiver disponível.
 
 ## [0.2.6] - 2026-03-02
-- Corrige regressao no template do mini painel que impedia o envio de mensagens e o clique nas sugestoes.
-- Restaura a referencia do icone utilizado no cabecalho (plusFileSelectionUrl), evitando erro de runtime no render.
+- Corrige regressão no template do mini painel que impedia o envio de mensagens e o clique nas sugestões.
+- Restaura a referência do ícone utilizado no cabeçalho (plusFileSelectionUrl), evitando erro de runtime no render.
 
 ## [0.2.5] - 2026-03-02
-- Suaviza o `border-radius` da moldura do composer para evitar distorcao visual em mensagens longas.
+- Suaviza o `border-radius` da moldura do composer para evitar distorção visual em mensagens longas.
 - Impede overflow visual do conteúdo com `overflow: hidden` na moldura do input.
 - Define limite de altura do composer e ativa rolagem interna ao ultrapassar o limite, evitando que a caixa avance para fora da tela.
 
 ## [0.2.4] - 2026-03-02
-- Oculta temporariamente os controles de anexo e audio no composer, mantendo apenas o envio de texto para o agente.
-- Ajusta o alinhamento visual do placeholder do campo de digitacao.
+- Oculta temporariamente os controles de anexo e áudio no composer, mantendo apenas o envio de texto para o agente.
+- Ajusta o alinhamento visual do placeholder do campo de digitação.
 
 ## [0.2.3] - 2026-03-02
-- Corrige renderizacao de code block no markdown para evitar fundo interno branco em blocos escuros (`pre code`).
+- Corrige renderização de code block no markdown para evitar fundo interno branco em blocos escuros (`pre code`).
 - Suporta composer multiline com `Shift+Enter` para quebra de linha e `Enter` para envio.
-- Troca o campo de digitacao de `input` para `textarea` e ajusta estilos para crescimento vertical.
+- Troca o campo de digitação de `input` para `textarea` e ajusta estilos para crescimento vertical.
 - Implementa autoajuste de altura do composer sem barra de rolagem interna.
-- Corrige sincronizacao de altura ao alternar mini/fullscreen, ajustando todos os composers renderizados imediatamente.
+- Corrige sincronização de altura ao alternar mini/fullscreen, ajustando todos os composers renderizados imediatamente.
 
 ## [0.2.2] - 2026-02-27
 - Adiciona novas parametrizações por projeto para o botão flutuante (ícone principal, label e fundo), mantendo fallback para os assets atuais.

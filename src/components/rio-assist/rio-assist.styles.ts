@@ -1,6 +1,7 @@
 import { css } from 'lit';
 import { floatingButtonStyles } from '../floating-button/floating-button.styles';
 import { miniPanelStyles } from '../mini-panel/mini-panel.styles';
+import { messageActionsStyles } from '../mini-panel/message-actions.styles';
 import { fullscreenStyles } from '../fullscreen/fullscreen.styles';
 import { conversationsPanelStyles } from '../conversations-panel/conversations-panel.styles';
 
@@ -120,6 +121,7 @@ export const widgetStyles = [
   baseStyles,
   floatingButtonStyles,
   miniPanelStyles,
+  messageActionsStyles,
   fullscreenStyles,
   conversationsPanelStyles,
 ];

@@ -4,6 +4,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderConsultantAgentHero } from '../../consultant-agent/consultant-agent.template';
+import { renderMessageActions } from './message-actions.template';
 import type {
   ConsultantAgentOption,
   ConsultantQuestion,
@@ -18,12 +19,6 @@ const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', imp
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
 const voiceRecoverIconUrl = new URL('../../assets/icons/voiceRecoverIcon.png', import.meta.url).href;
 const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
-const likeIconUrl = new URL('../../assets/icons/like.png', import.meta.url).href;
-const unlikeIconUrl = new URL('../../assets/icons/unlike.png', import.meta.url).href;
-const updateIconUrl = new URL('../../assets/icons/update.png', import.meta.url).href;
-const shareIconUrl = new URL('../../assets/icons/share.png', import.meta.url).href;
-const copyIconUrl = new URL('../../assets/icons/copyText.png', import.meta.url).href;
-const lineThreeDotsIconUrl = new URL('../../assets/icons/lineThreeDots.png', import.meta.url).href;
 
 const formatMessageTimestamp = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -197,78 +192,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
                   ? renderConsultantPrompt(component, (message as any).consultantPrompt)
                   : unsafeHTML(message.html ?? message.text)}
             </div>
-            ${message.role === 'assistant'
-              ? html`
-                  <div class="message__actions" aria-label="Ações da resposta">
-                    <button
-                      class=${classMap({
-                        'message__action-button': true,
-                        'message__action-button--liked':
-                          component.messageReactions[message.id] === 'like',
-                      })}
-                      type="button"
-                      aria-label="Curtir"
-                      aria-pressed=${component.messageReactions[message.id] === 'like'}
-                      @click=${() => component.handleToggleReaction('like', message)}
-                    >
-                      <img src=${likeIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class=${classMap({
-                        'message__action-button': true,
-                        'message__action-button--unliked':
-                          component.messageReactions[message.id] === 'unlike',
-                      })}
-                      type="button"
-                      aria-label="Não curtir"
-                      aria-pressed=${component.messageReactions[message.id] === 'unlike'}
-                      @click=${() => component.handleToggleReaction('unlike', message)}
-                    >
-                      <img src=${unlikeIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class="message__action-button"
-                      type="button"
-                      aria-label="Atualizar"
-                      ?disabled=${component.isLoading || !message.responseTo}
-                      @click=${() => component.handleUpdateResponse(message)}
-                    >
-                      <img src=${updateIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class="message__action-button"
-                      type="button"
-                      aria-label="Compartilhar"
-                      @click=${() => component.handleMessageAction('share', message)}
-                    >
-                      <img src=${shareIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class=${classMap({
-                        'message__action-button': true,
-                        'message__action-button--copied':
-                          component.copiedMessageId === message.id,
-                      })}
-                      type="button"
-                      aria-label="Copiar"
-                      @click=${() => component.handleCopyMessage(message)}
-                    >
-                      <img src=${copyIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      class="message__action-button"
-                      type="button"
-                      aria-label="Mais opções"
-                      @click=${() => component.handleMessageAction('more', message)}
-                    >
-                      <img src=${lineThreeDotsIconUrl} alt="" aria-hidden="true" />
-                    </button>
-                    ${component.copiedMessageId === message.id
-                      ? html`<span class="message__copy-feedback" role="status">Copiado!</span>`
-                      : null}
-                  </div>
-                `
-              : null}
+            ${renderMessageActions(component, message)}
             <time>
               ${formatMessageTimestamp(message.timestamp)}
             </time>
