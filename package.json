@@ -1,6 +1,6 @@
 {
   "name": "rio-assist-widget",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Web Component do painel lateral UptAIme Assist, pronto para ser embutido em qualquer projeto.",
   "type": "module",
   "scripts": {

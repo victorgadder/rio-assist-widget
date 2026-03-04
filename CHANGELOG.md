@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## [0.2.8] - 2026-03-04
+- Substitui a lógica de prefixo "Quero uma resposta curta sobre:" por controle explícito via boolean `quickResponse` (padrão `true`).
+- Envia `quickResponse` no payload do `sendMessage` para o backend decidir o comportamento da resposta.
+- Mantém o toggle de "Respostas rápidas" na UI, agora vinculado ao estado `quickResponse` nos modos mini painel e fullscreen.
+
 ## [0.2.7] - 2026-03-04
 - Modula a barra de ações das respostas em template dedicado (`message-actions.template.ts`) para facilitar manutenção.
 - Modula os estilos da barra de ações em arquivo separado (`message-actions.styles.ts`) e integra no agregador global de estilos.

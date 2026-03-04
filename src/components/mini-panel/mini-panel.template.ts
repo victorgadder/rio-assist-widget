@@ -384,13 +384,13 @@ export const renderMiniPanel = (component: RioAssistWidget) => {
               type="button"
               class="short-answer-toggle short-answer-toggle--header"
               role="switch"
-              aria-checked=${component.shortAnswerEnabled}
-              @click=${() => component.toggleShortAnswers()}
+              aria-checked=${component.quickResponse}
+              @click=${() => component.toggleQuickResponse()}
             >
               <span
                 class=${classMap({
                   'short-answer-toggle__track': true,
-                  'short-answer-toggle__track--on': component.shortAnswerEnabled,
+                  'short-answer-toggle__track--on': component.quickResponse,
                 })}
                 aria-hidden="true"
               >

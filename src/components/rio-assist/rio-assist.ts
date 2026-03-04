@@ -59,6 +59,7 @@ export type ChatMessage = {
   request?: {
     text: string;
     toSend: string;
+    quickResponse: boolean;
     consultantContext?: {
       branchId: string | null;
       branchLabel: string | null;
@@ -71,6 +72,7 @@ export type ChatMessage = {
     messageId: string;
     requestText: string;
     requestToSend: string;
+    quickResponse: boolean;
     consultantContext?: {
       branchId: string | null;
       branchLabel: string | null;
@@ -177,7 +179,7 @@ export class RioAssistWidget extends LitElement {
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
     renameConversationTarget: { attribute: false },
-    shortAnswerEnabled: { type: Boolean, state: true },
+    quickResponse: { type: Boolean, state: true },
     newConversationConfirmOpen: { type: Boolean, state: true },
     conversationActionError: { attribute: false },
     headerActions: { attribute: false },
@@ -301,7 +303,7 @@ export class RioAssistWidget extends LitElement {
 
   renameConversationTarget: ConversationRenameTarget | null = null;
 
-  shortAnswerEnabled = true;
+  quickResponse = true;
 
   newConversationConfirmOpen = false;
 
@@ -491,6 +493,7 @@ export class RioAssistWidget extends LitElement {
         messageId: string;
         requestText: string;
         requestToSend: string;
+        quickResponse: boolean;
         consultantContext?: {
           branchId: string | null;
           branchLabel: string | null;
@@ -829,8 +832,8 @@ export class RioAssistWidget extends LitElement {
     this.showNewConversationShortcut = !this.showNewConversationShortcut;
   }
 
-  toggleShortAnswers() {
-    this.shortAnswerEnabled = !this.shortAnswerEnabled;
+  toggleQuickResponse() {
+    this.quickResponse = !this.quickResponse;
   }
 
   handleConsultantAgentOpen() {
@@ -2256,6 +2259,7 @@ export class RioAssistWidget extends LitElement {
       forcePayload: {
         contentToSend: message.responseTo.requestToSend,
         contentToDisplay: message.responseTo.requestText,
+        quickResponse: message.responseTo.quickResponse,
       },
       consultantContext: message.responseTo.consultantContext ?? null,
       isConsultantAgent: message.responseTo.isConsultantAgent ?? false,
@@ -2378,6 +2382,7 @@ export class RioAssistWidget extends LitElement {
       forcePayload?: {
         contentToSend: string;
         contentToDisplay: string;
+        quickResponse: boolean;
       };
       attachments?: AttachmentItem[];
     } | null = null,
@@ -2387,10 +2392,8 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const contentToSend = options?.forcePayload?.contentToSend ??
-      (this.shortAnswerEnabled
-        ? `Quero uma resposta curta sobre: ${content}`
-        : content);
+    const quickResponse = options?.forcePayload?.quickResponse ?? this.quickResponse;
+    const contentToSend = options?.forcePayload?.contentToSend ?? content;
     const contentToDisplay = options?.forcePayload?.contentToDisplay ?? content;
 
     if (!this.currentConversationId) {
@@ -2408,6 +2411,7 @@ export class RioAssistWidget extends LitElement {
           token: this.rioToken,
           consultantContext: options?.consultantContext ?? null,
           isConsultantAgent: options?.isConsultantAgent ?? false,
+          quickResponse,
           attachments: options?.attachments?.map((item) => item.file) ?? [],
         },
         bubbles: true,
@@ -2418,6 +2422,7 @@ export class RioAssistWidget extends LitElement {
     const requestPayload: ChatMessage['request'] = {
       text: contentToDisplay,
       toSend: contentToSend,
+      quickResponse,
       consultantContext: options?.consultantContext ?? null,
       isConsultantAgent: options?.isConsultantAgent ?? false,
     };
@@ -2431,6 +2436,7 @@ export class RioAssistWidget extends LitElement {
         messageId: userMessage.id,
         requestText: requestPayload.text,
         requestToSend: requestPayload.toSend,
+        quickResponse: requestPayload.quickResponse,
         consultantContext: requestPayload.consultantContext ?? null,
         isConsultantAgent: requestPayload.isConsultantAgent ?? false,
       };
@@ -2439,6 +2445,7 @@ export class RioAssistWidget extends LitElement {
         messageId: options?.responseToMessageId ?? 'resend',
         requestText: requestPayload.text,
         requestToSend: requestPayload.toSend,
+        quickResponse: requestPayload.quickResponse,
         consultantContext: requestPayload.consultantContext ?? null,
         isConsultantAgent: requestPayload.isConsultantAgent ?? false,
       };
@@ -2454,13 +2461,15 @@ export class RioAssistWidget extends LitElement {
 
     try {
       const client = this.ensureRioClient();
-      const extraPayload =
-        options && (options.consultantContext || options.isConsultantAgent)
+      const extraPayload = {
+        quickResponse,
+        ...(options && (options.consultantContext || options.isConsultantAgent)
           ? {
               isConsultantAgent: Boolean(options.isConsultantAgent),
               consultantContext: options.consultantContext ?? null,
             }
-          : undefined;
+          : {}),
+      };
       await client.sendMessage(contentToSend, this.currentConversationId, extraPayload);
       if (options?.attachments?.length) {
         const hadVoice =
@@ -2588,6 +2597,7 @@ export class RioAssistWidget extends LitElement {
           messageId: this.pendingResponseTo.messageId,
           requestText: this.pendingResponseTo.requestText,
           requestToSend: this.pendingResponseTo.requestToSend,
+          quickResponse: this.pendingResponseTo.quickResponse,
           consultantContext: this.pendingResponseTo.consultantContext ?? null,
           isConsultantAgent: this.pendingResponseTo.isConsultantAgent ?? false,
         }
