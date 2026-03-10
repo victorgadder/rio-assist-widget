@@ -5,7 +5,7 @@ export default defineConfig({
     lib: {
       name: 'RioAssist',
       entry: 'src/main.ts',
-      fileName: () => 'rio-assist.js',
+      fileName: (format) => (format === 'es' ? 'rio-assist.es.js' : 'rio-assist.js'),
       formats: ['es', 'iife'],
     },
     rollupOptions: {

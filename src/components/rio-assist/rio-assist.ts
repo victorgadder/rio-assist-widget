@@ -15,9 +15,15 @@ import {
   buildConsultantFollowUpText,
   loadConsultantAgentOptions,
 } from '../../consultant-agent/consultant-agent';
+import { logger } from '../../utils/logger';
 
 type ChatRole = 'user' | 'assistant';
 const COMPOSER_MAX_HEIGHT_PX = 280;
+const console = {
+  info: logger.info,
+  warn: logger.warn,
+  error: logger.error,
+};
 
 type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image' | 'audio';
 
@@ -311,7 +317,8 @@ export class RioAssistWidget extends LitElement {
 
   private loadingLabelInternal = 'UptAIme Assist está respondendo...';
   private loadingTimerSlow: number | null = null;
-  private loadingTimerTimeout: number | null = null;
+  private loadingTimerLong: number | null = null;
+  private loadingTimerVeryLong: number | null = null;
 
   private refreshConversationsAfterResponse = false;
 
@@ -479,8 +486,6 @@ export class RioAssistWidget extends LitElement {
   private rioClient: RioWebsocketClient | null = null;
 
   private rioUnsubscribe: (() => void) | null = null;
-
-  private loadingTimer: number | null = null;
 
   copiedMessageId: string | null = null;
 
@@ -3194,14 +3199,14 @@ export class RioAssistWidget extends LitElement {
     }, 20000);
 
     // Após 60s, aviso de demora maior.
-    this.loadingTimerTimeout = window.setTimeout(() => {
+    this.loadingTimerLong = window.setTimeout(() => {
       this.loadingLabelInternal =
         'UptAIme Assist ainda está processando sua resposta. Peço que aguarde um pouco mais';
       this.requestUpdate();
     }, 60000);
 
     // Após 120s, novo aviso de demora maior.
-    this.loadingTimerTimeout = window.setTimeout(() => {
+    this.loadingTimerVeryLong = window.setTimeout(() => {
       this.loadingLabelInternal =
         'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
       this.requestUpdate();
@@ -3209,19 +3214,19 @@ export class RioAssistWidget extends LitElement {
   }
 
   private clearLoadingGuard() {
-    if (this.loadingTimer !== null) {
-      window.clearTimeout(this.loadingTimer);
-      this.loadingTimer = null;
-    }
-
     if (this.loadingTimerSlow !== null) {
       window.clearTimeout(this.loadingTimerSlow);
       this.loadingTimerSlow = null;
     }
 
-    if (this.loadingTimerTimeout !== null) {
-      window.clearTimeout(this.loadingTimerTimeout);
-      this.loadingTimerTimeout = null;
+    if (this.loadingTimerLong !== null) {
+      window.clearTimeout(this.loadingTimerLong);
+      this.loadingTimerLong = null;
+    }
+
+    if (this.loadingTimerVeryLong !== null) {
+      window.clearTimeout(this.loadingTimerVeryLong);
+      this.loadingTimerVeryLong = null;
     }
   }
 

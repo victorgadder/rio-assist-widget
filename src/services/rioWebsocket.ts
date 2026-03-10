@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 const WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
 const HEARTBEAT_INTERVAL_MS = 5 * 60_000; // keep-alive before the 10min idle timeout
 
@@ -41,7 +43,7 @@ export class RioWebsocketClient {
       ...(extra ?? {}),
     };
 
-    console.info('[RioAssist][ws] enviando payload de mensagem', payload);
+    logger.info('[RioAssist][ws] enviando payload de mensagem', payload);
     socket.send(JSON.stringify(payload));
   }
 
@@ -64,7 +66,7 @@ export class RioWebsocketClient {
       newTitle,
     };
 
-    console.info('[RioAssist][ws] enviando renameConversation', payload);
+    logger.info('[RioAssist][ws] enviando renameConversation', payload);
     socket.send(JSON.stringify(payload));
   }
 
@@ -75,7 +77,7 @@ export class RioWebsocketClient {
       conversationId,
     };
 
-    console.info('[RioAssist][ws] enviando deleteConversation', payload);
+    logger.info('[RioAssist][ws] enviando deleteConversation', payload);
     socket.send(JSON.stringify(payload));
   }
 

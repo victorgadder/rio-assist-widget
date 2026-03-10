@@ -5,6 +5,7 @@ import {
   type ConsultantFollowUp,
   type ConsultantQuestion,
 } from './consultant-agent-mocks';
+import { logger } from '../utils/logger';
 
 export type ConsultantAgentState = {
   isVisible: boolean;
@@ -56,7 +57,7 @@ export async function loadConsultantAgentOptions(): Promise<ConsultantAgentOptio
       return a.label.localeCompare(b.label);
     });
   } catch (error) {
-    console.error('[ConsultantAgent] Falha ao carregar branches da API.', error);
+    logger.error('[ConsultantAgent] Falha ao carregar branches da API.', error);
     return [];
   }
 }
