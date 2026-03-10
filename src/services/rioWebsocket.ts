@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 
-const WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
+const DEFAULT_WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
 const HEARTBEAT_INTERVAL_MS = 5 * 60_000; // keep-alive before the 10min idle timeout
 
 export type RioIncomingMessage = {
@@ -12,6 +12,7 @@ export type RioIncomingMessage = {
 
 export class RioWebsocketClient {
   readonly token: string;
+  readonly websocketUrl: string;
 
   private socket: WebSocket | null = null;
 
@@ -21,12 +22,14 @@ export class RioWebsocketClient {
 
   private heartbeatId: number | null = null;
 
-  constructor(token: string) {
+  constructor(token: string, options?: { websocketUrl?: string }) {
     this.token = token;
+    this.websocketUrl = options?.websocketUrl?.trim() || DEFAULT_WEBSOCKET_URL;
   }
 
-  matchesToken(value: string) {
-    return this.token === value;
+  matchesConnection(token: string, websocketUrl?: string) {
+    const nextWebsocketUrl = websocketUrl?.trim() || DEFAULT_WEBSOCKET_URL;
+    return this.token === token && this.websocketUrl === nextWebsocketUrl;
   }
 
   async sendMessage(
@@ -108,7 +111,7 @@ export class RioWebsocketClient {
     }
 
     this.socket = new WebSocket(
-      `${WEBSOCKET_URL}?token=${encodeURIComponent(this.token)}`,
+      `${this.websocketUrl}?token=${encodeURIComponent(this.token)}`,
     );
 
     this.socket.addEventListener('message', (event) => this.handleMessage(event));

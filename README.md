@@ -45,6 +45,8 @@ Se nenhum parametro abaixo for informado, o widget mantem o comportamento e os v
 - `floatingButtonIconUrl`: icone principal do botao flutuante.
 - `floatingButtonLabelIconUrl`: imagem/label do botao flutuante.
 - `floatingButtonBackgroundIconUrl`: imagem de fundo do botao flutuante.
+- `wsBaseUrl`: URL base do websocket (padrao: `wss://ws.volkswagen.latam-sandbox.rio.cloud`).
+- `consultantApiBaseUrl`: URL base da API do consultor (padrao: `https://consultant-api.latam-sandbox.rio.cloud/consultant/api/v1`).
 - `title`: titulo exibido no mini painel e no modo tela cheia.
 - `consultantAgentButtonText`: texto do botao "Consulte o UptAIme Agent".
 - `showConsultantAgentButton`: controla se o botao "Consulte o UptAIme Agent" sera exibido (`true` ou `false`).
@@ -61,6 +63,8 @@ Exemplo:
     floatingButtonIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/icon.png',
     floatingButtonLabelIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/label.png',
     floatingButtonBackgroundIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/bg.png',
+    wsBaseUrl: 'wss://ws.projeto-a.exemplo.com',
+    consultantApiBaseUrl: 'https://consultor.projeto-a.exemplo.com/consultant/api/v1',
     consultantAgentButtonText: 'Falar com especialista',
     showConsultantAgentButton: true,
     consultantAgentInitialMessage:
@@ -81,6 +85,8 @@ Tambem e possivel configurar via atributos `data-*` no elemento:
   data-floating-button-icon-url="https://cdn.exemplo.com/icones/projeto-a/icon.png"
   data-floating-button-label-icon-url="https://cdn.exemplo.com/icones/projeto-a/label.png"
   data-floating-button-background-icon-url="https://cdn.exemplo.com/icones/projeto-a/bg.png"
+  data-ws-base-url="wss://ws.projeto-a.exemplo.com"
+  data-consultant-api-base-url="https://consultor.projeto-a.exemplo.com/consultant/api/v1"
   data-auto-start-consultant-flow="true"
 ></rio-assist-widget>
 ```
@@ -103,7 +109,7 @@ Tambem e possivel configurar via atributos `data-*` no elemento:
 
 ## Eventos disponibilizados
 - `rioassist:open` / `rioassist:close` - disparados ao abrir/fechar o painel.
-- `rioassist:send` - disparado quando o usuario envia uma mensagem. O `detail` contem `{ message, apiBaseUrl, token }`.
+- `rioassist:send` - disparado quando o usuario envia uma mensagem. O `detail` contem `{ message, apiBaseUrl, hasToken, tokenPreview }`.
 
 Escute esses eventos caso queira registrar logs ou interceptar mensagens antes/depois de irem para o websocket.
 

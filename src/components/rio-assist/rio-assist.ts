@@ -158,6 +158,8 @@ export class RioAssistWidget extends LitElement {
     placeholder: { type: String, attribute: 'data-placeholder' },
     accentColor: { type: String, attribute: 'data-accent-color' },
     apiBaseUrl: { type: String, attribute: 'data-api-base-url' },
+    wsBaseUrl: { type: String, attribute: 'data-ws-base-url' },
+    consultantApiBaseUrl: { type: String, attribute: 'data-consultant-api-base-url' },
     rioToken: { type: String, attribute: 'data-rio-token' },
     suggestionsSource: { type: String, attribute: 'data-suggestions' },
     messages: { state: true },
@@ -266,6 +268,10 @@ export class RioAssistWidget extends LitElement {
   floatingButtonOffset = 32;
 
   apiBaseUrl = '';
+
+  wsBaseUrl = '';
+
+  consultantApiBaseUrl = '';
 
   rioToken = '';
 
@@ -426,6 +432,19 @@ export class RioAssistWidget extends LitElement {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+  }
+
+  private getTokenPreview(value: string) {
+    const token = value.trim();
+    if (!token) {
+      return null;
+    }
+
+    if (token.length <= 10) {
+      return `${token.slice(0, 2)}***${token.slice(-2)}`;
+    }
+
+    return `${token.slice(0, 6)}***${token.slice(-4)}`;
   }
 
   private getFileExtension(filename: string) {
@@ -650,7 +669,7 @@ export class RioAssistWidget extends LitElement {
 
   private async bootstrapConsultantAgent() {
     try {
-      this.consultantAgentOptions = await loadConsultantAgentOptions();
+      this.consultantAgentOptions = await loadConsultantAgentOptions(this.consultantApiBaseUrl);
     } catch (error) {
       console.error(
         '[RioAssist][consultant] erro ao carregar opções do agente consultor',
@@ -2413,7 +2432,8 @@ export class RioAssistWidget extends LitElement {
         detail: {
           message: content,
           apiBaseUrl: this.apiBaseUrl,
-          token: this.rioToken,
+          hasToken: Boolean(this.rioToken.trim()),
+          tokenPreview: this.getTokenPreview(this.rioToken),
           consultantContext: options?.consultantContext ?? null,
           isConsultantAgent: options?.isConsultantAgent ?? false,
           quickResponse,
@@ -2510,9 +2530,10 @@ export class RioAssistWidget extends LitElement {
       );
     }
 
-    if (!this.rioClient || !this.rioClient.matchesToken(token)) {
+    const websocketUrl = this.wsBaseUrl.trim();
+    if (!this.rioClient || !this.rioClient.matchesConnection(token, websocketUrl)) {
       this.teardownRioClient();
-      this.rioClient = new RioWebsocketClient(token);
+      this.rioClient = new RioWebsocketClient(token, { websocketUrl });
       this.rioUnsubscribe = this.rioClient.onMessage((incoming) => {
         this.handleIncomingMessage(incoming);
       });
@@ -3038,7 +3059,7 @@ export class RioAssistWidget extends LitElement {
         timestamp: assistantTimestamp,
       });
     } else if (userText) {
-      // Se n�o tiver resposta, n�o exibimos a mensagem do usuario isolada.
+      // Se não tiver resposta, não exibimos a mensagem do usuário isolada.
       return [];
     }
 

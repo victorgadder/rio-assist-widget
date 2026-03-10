@@ -2,6 +2,8 @@ import './main';
 
 const rioToken = import.meta.env.VITE_RIO_TOKEN || 'SEU_TOKEN_RIO_AQUI';
 const apiBaseUrl = import.meta.env.VITE_RIO_API_BASE_URL || '';
+const wsBaseUrl = import.meta.env.VITE_RIO_WS_BASE_URL || '';
+const consultantApiBaseUrl = import.meta.env.VITE_CONSULTANT_API_BASE_URL || '';
 
 const boot = () => {
   window.RioAssist?.init({
@@ -10,6 +12,8 @@ const boot = () => {
     accentColor: '#B23672',
     rioToken,
     apiBaseUrl,
+    wsBaseUrl,
+    consultantApiBaseUrl,
     suggestions: [
       'Resumo da Frota',
       'Frota Disponível',

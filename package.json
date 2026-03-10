@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run typecheck",
+    "test": "node -e \"console.log('No automated tests configured yet')\""
   },
   "keywords": [
     "web component",

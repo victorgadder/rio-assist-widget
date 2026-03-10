@@ -11,6 +11,8 @@ export type RioAssistOptions = {
   suggestions?: string[];
   accentColor?: string;
   apiBaseUrl?: string;
+  wsBaseUrl?: string;
+  consultantApiBaseUrl?: string;
   rioToken?: string;
   floatingOffset?: number;
   consultantAgentButtonText?: string;
@@ -39,6 +41,8 @@ const DEFAULT_OPTIONS: Required<Omit<RioAssistOptions, 'target'>> = {
   ],
   accentColor: '#B23672',
   apiBaseUrl: '',
+  wsBaseUrl: '',
+  consultantApiBaseUrl: '',
   rioToken: '',
   floatingOffset: 32,
   consultantAgentButtonText: 'Consulte o UptAIme Agent',

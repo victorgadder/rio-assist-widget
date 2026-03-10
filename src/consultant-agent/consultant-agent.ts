@@ -13,7 +13,7 @@ export type ConsultantAgentState = {
   options: ConsultantAgentOption[];
 };
 
-const CONSULTANT_AGENT_API_BASE =
+const DEFAULT_CONSULTANT_AGENT_API_BASE =
   'https://consultant-api.latam-sandbox.rio.cloud/consultant/api/v1';
 
 export function getConsultantFollowUp(topicId: string, topicLabel: string): ConsultantFollowUp {
@@ -32,9 +32,10 @@ export function createConsultantAgentState(): ConsultantAgentState {
   };
 }
 
-export async function loadConsultantAgentOptions(): Promise<ConsultantAgentOption[]> {
+export async function loadConsultantAgentOptions(apiBaseUrl?: string): Promise<ConsultantAgentOption[]> {
+  const resolvedApiBaseUrl = apiBaseUrl?.trim() || DEFAULT_CONSULTANT_AGENT_API_BASE;
   try {
-    const response = await fetch(`${CONSULTANT_AGENT_API_BASE}/branches`, {
+    const response = await fetch(`${resolvedApiBaseUrl}/branches`, {
       headers: { Accept: 'application/json' },
     });
 
