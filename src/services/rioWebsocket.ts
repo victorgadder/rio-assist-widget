@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { parseIncomingMessage } from './rioMessageParser';
 
 const DEFAULT_WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
 const HEARTBEAT_INTERVAL_MS = 5 * 60_000; // keep-alive before the 10min idle timeout
@@ -184,33 +185,7 @@ export class RioWebsocketClient {
 
   private async handleMessage(event: MessageEvent) {
     const raw = await this.readMessage(event.data);
-    let parsed: unknown = null;
-    let text = raw;
-    let action: string | undefined;
-
-    try {
-      parsed = JSON.parse(raw);
-      if (typeof parsed === 'object' && parsed !== null) {
-        const maybeAction =
-          (parsed as any).action ?? (parsed as any).type ?? (parsed as any).event;
-
-        if (typeof maybeAction === 'string') {
-          action = maybeAction;
-        }
-
-        const maybeText =
-          (parsed as any).message ??
-          (parsed as any).response ??
-          (parsed as any).text ??
-          (parsed as any).content;
-
-        if (typeof maybeText === 'string') {
-          text = maybeText;
-        }
-      }
-    } catch {
-      parsed = null;
-    }
+    const { parsed, text, action } = parseIncomingMessage(raw);
 
     this.listeners.forEach((listener) => listener({ text, raw, data: parsed, action }));
   }

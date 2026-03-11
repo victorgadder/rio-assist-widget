@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
-    "test": "node -e \"console.log('No automated tests configured yet')\""
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "web component",
@@ -38,6 +39,7 @@
     "@types/dompurify": "^3.0.5",
     "playwright-chromium": "^1.56.1",
     "typescript": "^5.4.5",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "vitest": "^4.0.18"
   }
 }
