@@ -358,10 +358,21 @@ export const miniPanelStyles = css`
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid var(--accent-color, #008B9A);
+    flex: 0 0 16px;
+    border: 2px solid #008b9a;
     border-radius: 50%;
     border-top-color: transparent;
+    box-sizing: border-box;
     animation: typing-spin 0.8s linear infinite;
+  }
+
+  .typing > span:first-of-type {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .typing__dots {
+    flex: 0 0 auto;
   }
 
   @keyframes typing-spin {

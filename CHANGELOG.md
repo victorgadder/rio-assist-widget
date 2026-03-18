@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## [0.2.9] - 2026-03-18
+- Reativa a barra de ações apenas com os botões de atualizar resposta e copiar mensagem, mantendo as ações dependentes de backend fora da interface.
+- Restringe o botão de atualizar para aparecer somente na última resposta visível do agente.
+- Adiciona tooltips nos botões de atualizar e copiar para orientar a interação no hover.
+- Ajusta o spinner do estado de carregamento para manter alinhamento e proporção consistentes ao lado do texto e das reticências.
+
 ## [0.2.8] - 2026-03-04
 - Substitui a lógica de prefixo "Quero uma resposta curta sobre:" por controle explícito via boolean `quickResponse` (padrão `true`).
 - Envia `quickResponse` no payload do `sendMessage` para o backend decidir o comportamento da resposta.
@@ -267,4 +273,5 @@
 ## [0.1.2] - 2025-11-25
 - Atualiza o modelo padrão do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
 - Documentação e bundle compilado sincronizados com o novo modelo.
+
 
