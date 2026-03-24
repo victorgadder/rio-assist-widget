@@ -1,4 +1,9 @@
-# Changelog
+﻿# Changelog
+
+## [0.2.11] - 2026-03-24
+- Mantém a data e hora apenas na listagem de conversas, removendo a exibição sob o título no cabeçalho da tela fullscreen.
+- Ajusta o posicionamento dos controles superiores do fullscreen para afastar o toggle de "Respostas rápidas", o botão de nova conversa e o atalho de retorno da linha divisória do cabeçalho.
+- Refina a cor e a tipografia da data e hora na listagem de conversas, conforme direcionamento visual do projeto.
 
 ## [0.2.10] - 2026-03-24
 - Exibe a data e hora da última interação de cada conversa na listagem de conversas do painel mini, ao lado do menu de ações.

@@ -258,9 +258,9 @@ export const conversationsPanelStyles = css`
   .conversation-item__time {
     display: block;
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.2;
-    color: #8a98a4;
+    color: #545556;
     white-space: nowrap;
   }
 

@@ -80,14 +80,6 @@ export const fullscreenStyles = css`
     padding-left: 8px;
   }
 
-  .fullscreen-header__conversation {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
-  }
-
   .fullscreen-header__brand {
     font-family: 'Source Sans Pro', 'Inter', sans-serif;
     font-weight: 600;
@@ -142,14 +134,6 @@ export const fullscreenStyles = css`
     width: fit-content;
   }
 
-  .fullscreen-header__conversation-time {
-    display: block;
-    font-family: 'Source Sans Pro', 'Inter', sans-serif;
-    font-size: 11px;
-    line-height: 1.2;
-    color: #8a98a4;
-  }
-
   .fullscreen-header__actions {
     display: inline-flex;
     align-items: center;
@@ -178,7 +162,7 @@ export const fullscreenStyles = css`
 
   .fullscreen-exit-inline {
     position: absolute;
-    top: 64px;
+    top: 76px;
     right: 14px;
     width: 28px;
     height: 28px;
@@ -206,7 +190,7 @@ export const fullscreenStyles = css`
 
   .fullscreen-utility-bar {
     position: absolute;
-    top: 60px;
+    top: 72px;
     right: 52px;
     display: inline-flex;
     align-items: center;
