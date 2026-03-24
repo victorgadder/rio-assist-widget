@@ -59,7 +59,7 @@ export const fullscreenStyles = css`
     align-items: center;
     background: #fff;
     border-bottom: 1px solid #e0e6eb;
-    height: 50px;
+    min-height: 64px;
     column-gap: 8px;
   }
 
@@ -74,10 +74,18 @@ export const fullscreenStyles = css`
 
   .fullscreen-header__tabs {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     height: 100%;
     position: relative;
     padding-left: 8px;
+  }
+
+  .fullscreen-header__conversation {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
   }
 
   .fullscreen-header__brand {
@@ -131,6 +139,15 @@ export const fullscreenStyles = css`
     height: 100%;
     box-sizing: border-box;
     line-height: 1;
+    width: fit-content;
+  }
+
+  .fullscreen-header__conversation-time {
+    display: block;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    color: #8a98a4;
   }
 
   .fullscreen-header__actions {

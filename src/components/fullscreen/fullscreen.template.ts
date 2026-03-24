@@ -3,6 +3,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import type { HeaderActionConfig, RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderChatSurface } from '../mini-panel/mini-panel.template';
+import { formatChatTimestamp } from '../rio-assist/timestamp-utils';
 
 const homeIconUrl = new URL('../../assets/icons/homeIcon.png', import.meta.url).href;
 const checkFrameIconUrl = new URL('../../assets/icons/checkFrame.png', import.meta.url).href;
@@ -84,7 +85,21 @@ export const renderFullscreen = (component: RioAssistWidget) => {
 
           <div class="fullscreen-header__tabs">
             ${component.activeConversationTitle
-              ? html`<span class="fullscreen-header__tab">${component.activeConversationTitle}</span>`
+              ? html`
+                  <div class="fullscreen-header__conversation">
+                    <span class="fullscreen-header__tab">${component.activeConversationTitle}</span>
+                    ${component.activeConversationUpdatedAt
+                      ? html`
+                          <time
+                            class="fullscreen-header__conversation-time"
+                            datetime=${component.activeConversationUpdatedAt}
+                          >
+                            ${formatChatTimestamp(component.activeConversationUpdatedAt)}
+                          </time>
+                        `
+                      : null}
+                  </div>
+                `
               : null}
           </div>
 

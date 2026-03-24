@@ -2,6 +2,7 @@ import { html } from 'lit';
 import { classMap } from 'lit/directives/class-map.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { RioAssistWidget } from '../rio-assist/rio-assist';
+import { formatChatTimestamp } from '../rio-assist/timestamp-utils';
 
 const threePointsIconUrl = new URL('../../assets/icons/threePoints.png', import.meta.url).href;
 const editIconUrl = new URL('../../assets/icons/edit.png', import.meta.url).href;
@@ -98,8 +99,13 @@ const renderConversationSurface = (
                 }
               }}
             >
-              <div class="conversation-item__text">
-                ${conversation.title}
+              <div class="conversation-item__content">
+                <div class="conversation-item__text">
+                  ${conversation.title}
+                </div>
+                <time class="conversation-item__time" datetime=${conversation.updatedAt}>
+                  ${formatChatTimestamp(conversation.updatedAt)}
+                </time>
               </div>
               <button
                 class="conversation-menu-button"

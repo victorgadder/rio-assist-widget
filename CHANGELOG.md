@@ -1,4 +1,10 @@
-﻿# Changelog
+# Changelog
+
+## [0.2.10] - 2026-03-24
+- Exibe a data e hora da última interação de cada conversa na listagem de conversas do painel mini, ao lado do menu de ações.
+- Exibe a data e hora da última interação abaixo do título da conversa ativa no cabeçalho da tela fullscreen.
+- Centraliza a regra de formatação temporal em utilitário compartilhado para manter consistência entre mensagens, lista de conversas e cabeçalho.
+- Sincroniza o `updatedAt` da conversa ativa com seleção, histórico carregado, respostas via websocket, exclusão e restauração de snapshot.
 
 ## [0.2.9] - 2026-03-18
 - Reativa a barra de ações apenas com os botões de atualizar resposta e copiar mensagem, mantendo as ações dependentes de backend fora da interface.
@@ -273,5 +279,3 @@
 ## [0.1.2] - 2025-11-25
 - Atualiza o modelo padrão do agente WebSocket para `eu.amazon.nova-pro-v1:0`.
 - Documentação e bundle compilado sincronizados com o novo modelo.
-
-

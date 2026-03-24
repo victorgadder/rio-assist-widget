@@ -5,6 +5,7 @@ import type { RioAssistWidget } from '../rio-assist/rio-assist';
 import { renderConversationsPanel } from '../conversations-panel/conversations-panel.template';
 import { renderConsultantAgentHero } from '../../consultant-agent/consultant-agent.template';
 import { renderMessageActions } from './message-actions.template';
+import { formatChatTimestamp } from '../rio-assist/timestamp-utils';
 import type {
   ConsultantAgentOption,
   ConsultantQuestion,
@@ -19,42 +20,6 @@ const closeFileCardIconUrl = new URL('../../assets/icons/closeFileCard.png', imp
 const arrowButtonUrl = new URL('../../assets/icons/arrowButton.png', import.meta.url).href;
 const voiceRecoverIconUrl = new URL('../../assets/icons/voiceRecoverIcon.png', import.meta.url).href;
 const fileTypeIconUrl = new URL('../../assets/svg/fileType.svg', import.meta.url).href;
-
-const formatMessageTimestamp = (timestamp: number) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const now = new Date();
-  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayDiff = Math.floor((nowStart.getTime() - dateStart.getTime()) / 86400000);
-
-  const timeLabel = date.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  if (dayDiff === 0) {
-    return timeLabel;
-  }
-
-  let dateLabel = '';
-  if (dayDiff === 1) {
-    dateLabel = 'ontem';
-  } else if (dayDiff >= 2 && dayDiff <= 5) {
-    dateLabel = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-  } else {
-    dateLabel = date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  }
-
-  return `${dateLabel} ${timeLabel}`;
-};
 
 const renderConsultantFollowUp = (
   component: RioAssistWidget,
@@ -194,7 +159,7 @@ export const renderChatSurface = (component: RioAssistWidget) => {
             </div>
             ${renderMessageActions(component, message)}
             <time>
-              ${formatMessageTimestamp(message.timestamp)}
+              ${formatChatTimestamp(message.timestamp)}
             </time>
           </div>
         `;

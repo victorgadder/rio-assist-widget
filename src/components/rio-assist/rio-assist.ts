@@ -188,9 +188,10 @@ export class RioAssistWidget extends LitElement {
   isFullscreen: { type: Boolean, state: true },
   conversationScrollbar: { state: true },
   showNewConversationShortcut: { type: Boolean, state: true },
-  conversations: { state: true },
-  conversationHistoryLoading: { type: Boolean, state: true },
+    conversations: { state: true },
+    conversationHistoryLoading: { type: Boolean, state: true },
     activeConversationTitle: { state: true },
+    activeConversationUpdatedAt: { state: true },
     conversationHistoryError: { type: String, state: true },
     deleteConversationTarget: { attribute: false },
     renameConversationTarget: { attribute: false },
@@ -336,6 +337,8 @@ export class RioAssistWidget extends LitElement {
   private refreshConversationsAfterResponse = false;
 
   activeConversationTitle: string | null = null;
+
+  activeConversationUpdatedAt: string | null = null;
 
   headerActions: HeaderActionConfig[] = [];
 
@@ -1090,6 +1093,7 @@ export class RioAssistWidget extends LitElement {
 
     if (this.currentConversationId === id) {
       this.activeConversationTitle = newTitle;
+      this.syncActiveConversationMeta();
     }
   }
 
@@ -1110,6 +1114,7 @@ export class RioAssistWidget extends LitElement {
     if (wasActive) {
       this.currentConversationId = null;
       this.activeConversationTitle = null;
+      this.activeConversationUpdatedAt = null;
       this.messages = [];
     }
   }
@@ -1428,6 +1433,7 @@ export class RioAssistWidget extends LitElement {
         if (pending.wasActive) {
           this.currentConversationId = pending.conversationId;
           this.activeConversationTitle = pending.originalTitle;
+          this.activeConversationUpdatedAt = pending.snapshot?.updatedAt ?? null;
           this.messages = pending.messagesSnapshot ?? this.messages;
         }
       }
@@ -1582,6 +1588,7 @@ export class RioAssistWidget extends LitElement {
     this.teardownRioClient();
     this.currentConversationId = null;
     this.activeConversationTitle = null;
+    this.activeConversationUpdatedAt = null;
     this.showNewConversationShortcut = false;
     this.showSuggestions = true;
     this.consultantAgentVisible = false;
@@ -2413,6 +2420,7 @@ export class RioAssistWidget extends LitElement {
     if (!this.currentConversationId) {
       this.currentConversationId = null;
       this.activeConversationTitle = null;
+      this.activeConversationUpdatedAt = null;
     }
 
     const wasEmptyConversation = this.messages.length === 0;
@@ -2581,6 +2589,7 @@ export class RioAssistWidget extends LitElement {
           this.conversations = next;
         }
         this.activeConversationTitle = incomingConversationTitle;
+        this.activeConversationUpdatedAt = updatedAt;
       }
       if (isNewConversation) {
         // Force refresh of conversation list for brand new conversations
@@ -2591,7 +2600,7 @@ export class RioAssistWidget extends LitElement {
         await this.requestConversationHistory();
       }
       this.currentConversationId = incomingConversationId;
-      this.syncActiveConversationTitle();
+      this.syncActiveConversationMeta();
     }
 
     console.info('[RioAssist][ws] resposta de mensagem recebida', {
@@ -2824,7 +2833,7 @@ export class RioAssistWidget extends LitElement {
     this.conversations = conversations;
     this.conversationHistoryLoading = false;
     this.conversationHistoryError = '';
-    this.syncActiveConversationTitle();
+    this.syncActiveConversationMeta();
     console.info('[RioAssist][history] conversas normalizadas', conversations);
   }
 
@@ -3109,6 +3118,15 @@ export class RioAssistWidget extends LitElement {
     return found ? found.title : null;
   }
 
+  private lookupConversationUpdatedAt(conversationId: string | null) {
+    if (!conversationId) {
+      return null;
+    }
+
+    const found = this.conversations.find((item) => item.id === conversationId);
+    return found ? found.updatedAt : null;
+  }
+
   private lookupConsultantBranchLabel(branchId: string | null): string | null {
     if (!branchId) {
       return null;
@@ -3121,15 +3139,17 @@ export class RioAssistWidget extends LitElement {
     return found ? found.label : null;
   }
 
-  private syncActiveConversationTitle() {
+  private syncActiveConversationMeta() {
     if (!this.currentConversationId) {
       return;
     }
 
     const title = this.lookupConversationTitle(this.currentConversationId);
+    const updatedAt = this.lookupConversationUpdatedAt(this.currentConversationId);
     if (title) {
       this.activeConversationTitle = title;
     }
+    this.activeConversationUpdatedAt = updatedAt;
   }
 
   private toIsoString(value: unknown) {

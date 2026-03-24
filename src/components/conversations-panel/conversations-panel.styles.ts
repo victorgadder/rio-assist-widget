@@ -215,8 +215,17 @@ export const conversationsPanelStyles = css`
     transition: color 0.2s ease, background-color 0.2s ease;
   }
 
+  .conversation-item__content {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   .conversations-panel:not(.conversations-panel--sidebar) .conversation-item {
     padding: 0 0 0 6px;
+    gap: 8px;
   }
 
   .conversations-panel--sidebar .conversation-item {
@@ -240,6 +249,19 @@ export const conversationsPanelStyles = css`
     flex: 1;
     padding-right: 16px;
     transition: color 0.2s ease;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .conversation-item__time {
+    display: block;
+    font-family: 'Source Sans Pro', 'Inter', sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    color: #8a98a4;
+    white-space: nowrap;
   }
 
   .conversation-item:hover .conversation-item__text,
