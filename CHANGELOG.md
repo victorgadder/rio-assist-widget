@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## [1.1.0] - 2026-03-25
+- Reorganiza o projeto em camadas de `domain`, `application`, `services` e `shared`, reduzindo o acoplamento do componente principal.
+- Extrai os fluxos de chat, histórico, consultor, anexos e ações de conversa para módulos reaproveitáveis e mais fáceis de testar.
+- Isola a captura de voz e a renderização markdown em serviços dedicados para simplificar manutenção e evolução do widget.
+- Amplia a cobertura de testes automatizados para os novos fluxos de aplicação, preservando o comportamento funcional do pacote.
+
 ## [0.2.11] - 2026-03-24
 - Mantém a data e hora apenas na listagem de conversas, removendo a exibição sob o título no cabeçalho da tela fullscreen.
 - Ajusta o posicionamento dos controles superiores do fullscreen para afastar o toggle de "Respostas rápidas", o botão de nova conversa e o atalho de retorno da linha divisória do cabeçalho.

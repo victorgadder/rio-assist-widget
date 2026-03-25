@@ -5,7 +5,7 @@ import type { RioAssistWidget, ChatMessage } from '../rio-assist/rio-assist';
 const updateIconUrl = new URL('../../assets/icons/update.png', import.meta.url).href;
 const copyIconUrl = new URL('../../assets/icons/copyText.png', import.meta.url).href;
 
-// Keep only frontend-ready actions visible until backend actions are available.
+// Mantemos apenas as ações já suportadas pelo comportamento atual da interface.
 const MESSAGE_ACTIONS_VISIBLE = true;
 
 export const renderMessageActions = (

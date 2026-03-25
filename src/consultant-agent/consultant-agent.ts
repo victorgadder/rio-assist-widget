@@ -1,10 +1,12 @@
 import {
   CONSULTANT_AGENT_INTRO,
   buildConsultantFollowUpText,
-  type ConsultantAgentOption,
-  type ConsultantFollowUp,
-  type ConsultantQuestion,
 } from './consultant-agent-mocks';
+import type {
+  ConsultantAgentOption,
+  ConsultantFollowUp,
+  ConsultantQuestion,
+} from '../domain/consultant';
 import { logger } from '../utils/logger';
 
 export type ConsultantAgentState = {

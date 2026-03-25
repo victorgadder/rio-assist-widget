@@ -1,27 +1,13 @@
-export type ConsultantQuestion = {
-  questionId: string;
-  prompt: string;
-  level?: string;
-  levelLabel?: string;
-  expectedResponse?: string;
-  order?: number;
-  active?: boolean;
-};
+import type {
+  ConsultantAgentOption,
+  ConsultantFollowUp,
+  ConsultantQuestion,
+} from '../domain/consultant';
 
-export type ConsultantAgentOption = {
-  id: string;
-  branchId: string;
-  label: string;
-  businessObjective?: string;
-  order?: number;
-  active?: boolean;
-  questions: ConsultantQuestion[];
-};
-
-export type ConsultantFollowUp = {
-  topicId: string;
-  topicLabel: string;
-  questions: ConsultantQuestion[];
+export type {
+  ConsultantAgentOption,
+  ConsultantFollowUp,
+  ConsultantQuestion,
 };
 
 export const CONSULTANT_AGENT_INTRO =

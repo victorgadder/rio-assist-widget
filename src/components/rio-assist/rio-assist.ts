@@ -5,26 +5,75 @@ import {
   RioWebsocketClient,
   type RioIncomingMessage,
 } from '../../services/rioWebsocket';
-import MarkdownIt from 'markdown-it';
-import markdownItTaskLists from 'markdown-it-task-lists';
-import DOMPurify from 'dompurify';
+import { VoiceCaptureController } from '../../services/voiceCapture';
+import { createMarkdownRenderer } from '../../services/markdownRenderer';
 import {
   CONSULTANT_AGENT_INTRO,
   type ConsultantAgentOption,
   type ConsultantQuestion,
-  buildConsultantFollowUpText,
   loadConsultantAgentOptions,
 } from '../../consultant-agent/consultant-agent';
 import {
-  looksLikeMessageHistoryEntry as isMessageHistoryEntry,
+  addFilesToSelection,
+  buildVoiceAttachment,
+  MAX_ATTACHMENT_COUNT,
+  removeAttachmentById,
+  ATTACHMENT_KIND_MAP,
+} from '../../application/attachment-flow';
+import {
+  buildWebsocketExtraPayload,
+  createAssistantResponseMessage,
+  createChatMessageFactory,
+  type OutgoingMessageOptions,
+  prepareOutgoingMessage,
+  syncConversationFromIncomingMessage,
+} from '../../application/chat-flow';
+import {
+  parseConversationSystemAction,
+  resolveConversationActionErrorText,
+  shouldIgnoreAssistantPayload,
+} from '../../application/conversation-action-flow';
+import {
+  applyConsultantEffectsAfterAssistantMessage,
+  createInitialConsultantFlowState,
+  prepareConsultantQuestionSend,
+  reopenConsultantPrompt,
+  selectConsultantSubject,
+  startConsultantFlow,
+  suppressConsultantPrompts,
+  type ConsultantFlowState,
+} from '../../application/consultant-flow';
+import {
+  extractConversationIdFromPayload,
+  extractHistoryEntries,
+  isHistoryPayloadMessage,
+  isMessageHistoryEntries,
+  normalizeConversationHistory,
+  normalizeMessageHistory,
+} from '../../application/history-flow';
+import type {
+  AttachmentItem,
+} from '../../domain/attachment';
+import type {
+  ChatMessage,
+  ChatRole,
+  PendingResponseState,
+} from '../../domain/chat';
+import type {
+  ConversationActionAttempt,
+  ConversationActionErrorState,
+  ConversationDeleteTarget,
+  ConversationItem,
+  ConversationRenameTarget,
+} from '../../domain/conversation';
+import {
   normalizeRole as normalizeHistoryRole,
   parseTimestamp as parseHistoryTimestamp,
   repairConversationId as repairHistoryConversationId,
-  toIsoString as toHistoryIsoString,
 } from './history-utils';
 import { logger } from '../../utils/logger';
 
-type ChatRole = 'user' | 'assistant';
+export type { ChatMessage } from '../../domain/chat';
 const COMPOSER_MAX_HEIGHT_PX = 280;
 const console = {
   info: logger.info,
@@ -32,117 +81,9 @@ const console = {
   error: logger.error,
 };
 
-type AttachmentKind = 'text' | 'sheet' | 'pdf' | 'image' | 'audio';
-
-type AttachmentItem = {
-  id: string;
-  file: File;
-  name: string;
-  typeLabel: string;
-  kind: AttachmentKind;
-  previewUrl?: string;
-};
-
-const MAX_ATTACHMENT_COUNT = 3;
-const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
-const ATTACHMENT_KIND_MAP: Record<AttachmentKind, string[]> = {
-  text: ['txt', 'doc', 'docx'],
-  sheet: ['xls', 'xlsx', 'csv'],
-  pdf: ['pdf'],
-  image: ['jpg', 'jpeg', 'png'],
-  audio: ['wav', 'mp3', 'm4a', 'ogg', 'webm'],
-};
-const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
-  text: 'Documento de Texto',
-  sheet: 'Planilha',
-  pdf: 'Documento PDF',
-  image: 'Imagem',
-  audio: 'Mensagem de audio',
-};
 const DEFAULT_CONSULTANT_AGENT_BUTTON_TEXT = 'Consulte o UptAIme Agent';
 const DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE =
   'Sou o Uptime Agent, especializado em otimizar seu tempo de operação. Para iniciar, estou te enviando o resumo da sua frota.';
-
-export type ChatMessage = {
-  id: string;
-  role: ChatRole;
-  text: string;
-  html?: string;
-  timestamp: number;
-  request?: {
-    text: string;
-    toSend: string;
-    quickResponse: boolean;
-    consultantContext?: {
-      branchId: string | null;
-      branchLabel: string | null;
-      questionId: string;
-      questionLevel: string | null;
-    } | null;
-    isConsultantAgent?: boolean;
-  };
-  responseTo?: {
-    messageId: string;
-    requestText: string;
-    requestToSend: string;
-    quickResponse: boolean;
-    consultantContext?: {
-      branchId: string | null;
-      branchLabel: string | null;
-      questionId: string;
-      questionLevel: string | null;
-    } | null;
-    isConsultantAgent?: boolean;
-  };
-  hidden?: boolean;
-  consultantPrompt?: {
-    id: string;
-    text: string;
-    options: ConsultantAgentOption[];
-  };
-  consultantFollowUp?: {
-    id: string;
-    topicId: string;
-    topicLabel: string;
-    questions: ConsultantQuestion[];
-  };
-};
-
-type ConversationItem = {
-  id: string;
-  title: string;
-  updatedAt: string;
-};
-
-type ConversationDeleteTarget = {
-  id: string;
-  title: string;
-  index: number;
-};
-
-type ConversationRenameTarget = {
-  id: string;
-  title: string;
-  index: number;
-  draft: string;
-};
-
-type ConversationActionKind = 'rename' | 'delete';
-
-type ConversationActionAttempt = {
-  action: ConversationActionKind;
-  conversationId: string;
-  originalTitle: string;
-  index: number;
-  newTitle?: string;
-  snapshot?: ConversationItem;
-  messagesSnapshot?: ChatMessage[];
-  wasActive?: boolean;
-};
-
-type ConversationActionErrorState = ConversationActionAttempt & {
-  message: string;
-};
 
 export type HeaderActionConfig = {
   id?: string;
@@ -378,41 +319,10 @@ export class RioAssistWidget extends LitElement {
 
   private pendingConversationAction: ConversationActionAttempt | null = null;
 
-  private voiceRecorder: MediaRecorder | null = null;
-  private voiceRecordingStream: MediaStream | null = null;
-  private voiceRecordingChunks: BlobPart[] = [];
-  private speechRecognizer: any | null = null;
+  private pendingVoiceRemovalId: string | null = null;
   private voiceTranscriptSegments: string[] = [];
   private voiceTranscriptPreview = '';
-  private pendingVoiceRemovalId: string | null = null;
-  private microphonePermissionGranted = false;
-
-  private inferUserIdFromToken(): string | null {
-    const token = this.rioToken.trim();
-    if (!token || !token.includes('.')) {
-      return null;
-    }
-
-    const [, payload] = token.split('.');
-    try {
-      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-      const candidate =
-        decoded?.userId ??
-        decoded?.user_id ??
-        decoded?.sub ??
-        decoded?.id ??
-        decoded?.email ??
-        decoded?.username;
-
-      if (candidate && typeof candidate === 'string') {
-        return candidate.replace(/[^a-zA-Z0-9_:-]/g, '');
-      }
-    } catch {
-      return null;
-    }
-
-    return null;
-  }
+  private readonly voiceCapture = new VoiceCaptureController(console);
 
   private repairConversationId(rawId: string): string {
     return repairHistoryConversationId(rawId);
@@ -440,55 +350,6 @@ export class RioAssistWidget extends LitElement {
     return `${token.slice(0, 6)}***${token.slice(-4)}`;
   }
 
-  private getFileExtension(filename: string) {
-    const parts = filename.split('.');
-    if (parts.length < 2) {
-      return '';
-    }
-
-    return parts[parts.length - 1].toLowerCase();
-  }
-
-  private resolveAttachmentKind(extension: string): AttachmentKind | null {
-    const normalized = extension.toLowerCase();
-    const entries = Object.entries(ATTACHMENT_KIND_MAP) as [AttachmentKind, string[]][];
-
-    for (const [kind, extensions] of entries) {
-      if (extensions.includes(normalized)) {
-        return kind;
-      }
-    }
-
-    return null;
-  }
-
-  private buildAttachmentItem(file: File): { item?: AttachmentItem; error?: string } {
-    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
-      return { error: `O arquivo ${file.name} excede 10 MB.` };
-    }
-
-    const extension = this.getFileExtension(file.name);
-    const kind = this.resolveAttachmentKind(extension);
-    if (!kind) {
-      return { error: `Formato nao suportado: ${file.name}.` };
-    }
-
-    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : this.randomId(12);
-
-    return {
-      item: {
-        id,
-        file,
-        name: file.name,
-        typeLabel: ATTACHMENT_KIND_LABEL[kind],
-        kind,
-        previewUrl: kind === 'image' ? URL.createObjectURL(file) : undefined,
-      },
-    };
-  }
-
   private clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
   }
@@ -505,27 +366,9 @@ export class RioAssistWidget extends LitElement {
 
   private copiedMessageTimer: number | null = null;
 
-  private pendingResponseTo:
-    | {
-        messageId: string;
-        requestText: string;
-        requestToSend: string;
-        quickResponse: boolean;
-        consultantContext?: {
-          branchId: string | null;
-          branchLabel: string | null;
-          questionId: string;
-          questionLevel: string | null;
-        } | null;
-        isConsultantAgent?: boolean;
-      }
-    | null = null;
+  private pendingResponseTo: PendingResponseState | null = null;
 
   private currentConversationId: string | null = null;
-
-  private conversationCounter = 0;
-
-  private conversationUserId: string | null = null;
 
   private conversationScrollbarDraggingId: number | null = null;
 
@@ -548,13 +391,21 @@ export class RioAssistWidget extends LitElement {
 
   private suppressFloatingButtonClick = false;
 
-  private markdownRenderer = new MarkdownIt({
-    html: false,
-    linkify: true,
-    breaks: true,
-  }).use(markdownItTaskLists);
+  private markdownRenderer = createMarkdownRenderer();
 
   conversations: ConversationItem[] = [];
+
+  private readonly createChatMessage = createChatMessageFactory({
+    createId: () => {
+      if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+      }
+
+      return `${Date.now()}-${Math.random()}`;
+    },
+    now: () => Date.now(),
+    renderHtml: (content) => this.renderMarkdown(content),
+  });
 
   get suggestions(): string[] {
     return this.randomizedSuggestions;
@@ -660,6 +511,36 @@ export class RioAssistWidget extends LitElement {
     this.clearLoadingGuard();
   }
 
+  private getConsultantFlowState(): ConsultantFlowState {
+    return {
+      showSuggestions: this.showSuggestions,
+      consultantAgentVisible: this.consultantAgentVisible,
+      activeConsultantFollowUpId: this.activeConsultantFollowUpId,
+      activeConsultantBranchId: this.activeConsultantBranchId,
+      activeConsultantPromptId: this.activeConsultantPromptId,
+      consultantAgentStage: this.consultantAgentStage,
+      consultantOptionsSuppressed: this.consultantOptionsSuppressed,
+      pendingConsultantFollowUpId: this.pendingConsultantFollowUpId,
+      lastConsultantPromptId: this.lastConsultantPromptId,
+      lastConsultantFollowUpId: this.lastConsultantFollowUpId,
+      lastConsultantFollowUpPayload: this.lastConsultantFollowUpPayload,
+    };
+  }
+
+  private applyConsultantFlowState(state: ConsultantFlowState) {
+    this.showSuggestions = state.showSuggestions;
+    this.consultantAgentVisible = state.consultantAgentVisible;
+    this.activeConsultantFollowUpId = state.activeConsultantFollowUpId;
+    this.activeConsultantBranchId = state.activeConsultantBranchId;
+    this.activeConsultantPromptId = state.activeConsultantPromptId;
+    this.consultantAgentStage = state.consultantAgentStage;
+    this.consultantOptionsSuppressed = state.consultantOptionsSuppressed;
+    this.pendingConsultantFollowUpId = state.pendingConsultantFollowUpId;
+    this.lastConsultantPromptId = state.lastConsultantPromptId;
+    this.lastConsultantFollowUpId = state.lastConsultantFollowUpId;
+    this.lastConsultantFollowUpPayload = state.lastConsultantFollowUpPayload;
+  }
+
   private async bootstrapConsultantAgent() {
     try {
       this.consultantAgentOptions = await loadConsultantAgentOptions(this.consultantApiBaseUrl);
@@ -722,12 +603,6 @@ export class RioAssistWidget extends LitElement {
       .flat()
       .map((ext) => `.${ext}`)
       .join(',');
-  }
-
-  private isSpeechRecognitionSupported() {
-    return Boolean(
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition,
-    );
   }
 
   handleFloatingButtonClick(event: Event) {
@@ -854,124 +729,77 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleConsultantAgentOpen() {
-    if (this.consultantAgentStage === 'awaiting') {
+    const result = startConsultantFlow({
+      state: this.getConsultantFlowState(),
+      consultantAgentOptions: this.consultantAgentOptions,
+      consultantAgentInitialMessage: this.consultantAgentInitialMessage,
+      defaultInitialMessage: DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE,
+      createMessage: (role, text, consultantFollowUp, options) =>
+        this.createMessage(role, text, consultantFollowUp, options),
+    });
+
+    if (!result) {
       return;
     }
 
-    this.showSuggestions = false;
-    this.consultantOptionsSuppressed = false;
-
-    if (this.consultantAgentOptions.length === 0) {
+    if (result.shouldBootstrapOptions) {
       void this.bootstrapConsultantAgent();
     }
 
-    const introMessage = this.createMessage(
-      'assistant',
-      this.consultantAgentInitialMessage.trim() || DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE,
-    );
-    this.messages = [...this.messages, introMessage];
-    this.consultantAgentStage = 'awaiting';
-    this.activeConsultantPromptId = null;
-    this.pendingConsultantFollowUpId = null;
-    this.activeConsultantFollowUpId = null;
+    this.messages = [...this.messages, result.introMessage];
+    this.applyConsultantFlowState(result.state);
 
-    void this.processMessage('Resumo da Frota', { suppressUserMessage: true });
+    void this.processMessage(result.initialPrompt, { suppressUserMessage: true });
   }
 
   handleConsultantAgentOption(option: ConsultantAgentOption) {
-    const label = option.label.trim();
-    if (!label) {
+    const result = selectConsultantSubject({
+      option,
+      hasMessages: this.messages.length > 0,
+      consultantAgentIntro: this.consultantAgentIntro,
+      createMessage: (role, text, consultantFollowUp, options) =>
+        this.createMessage(role, text, consultantFollowUp, options),
+      createId: (length) => this.randomId(length),
+      state: this.getConsultantFlowState(),
+    });
+
+    if (!result) {
       return;
     }
 
-    const questions =
-      option.questions?.filter(
-        (item) => item && typeof item.prompt === 'string' && typeof item.questionId === 'string',
-      ) ?? [];
-
-    if (this.messages.length === 0) {
-      const introMessage = this.createMessage('assistant', this.consultantAgentIntro);
-      this.messages = [...this.messages, introMessage];
-    }
-
-    const userMessage = this.createMessage('user', label);
-
-    const followUpId = this.randomId(12);
-
-    const followUpMessage = this.createMessage(
-      'assistant',
-      buildConsultantFollowUpText(label),
-      {
-        id: followUpId,
-        topicId: option.branchId ?? option.id,
-        topicLabel: label,
-        questions,
-      },
-    );
-
-    this.messages = [...this.messages, userMessage, followUpMessage];
-    this.consultantAgentVisible = false;
+    this.messages = [...this.messages, ...result.messages];
+    this.applyConsultantFlowState(result.state);
     this.errorMessage = '';
     this.showNewConversationShortcut = true;
-    this.showSuggestions = false;
-    this.activeConsultantFollowUpId = followUpId;
-    this.activeConsultantBranchId = option.branchId ?? option.id;
-    this.activeConsultantPromptId = null;
-    this.consultantOptionsSuppressed = false;
-    this.pendingConsultantFollowUpId = null;
-    this.lastConsultantFollowUpId = followUpId;
-    this.lastConsultantFollowUpPayload = {
-      topicId: option.branchId ?? option.id,
-      topicLabel: label,
-      questions,
-    };
     this.requestUpdate();
     this.scrollConversationToBottom();
   }
 
   handleConsultantChooseAnotherSubject() {
-    if (this.consultantOptionsSuppressed) {
+    const result = reopenConsultantPrompt({
+      state: this.getConsultantFlowState(),
+      consultantAgentOptions: this.consultantAgentOptions,
+      createMessage: (role, text, consultantFollowUp, options) =>
+        this.createMessage(role, text, consultantFollowUp, options),
+      createId: (length) => this.randomId(length),
+    });
+    if (!result) {
       return;
     }
-
-    const promptId = this.randomId(12);
-    const promptMessage: ChatMessage = {
-      ...this.createMessage('assistant', 'Em qual assunto posso ajudar você hoje?'),
-      consultantPrompt: {
-        id: promptId,
-        text: 'Em qual assunto posso ajudar você hoje?',
-        options: [...this.consultantAgentOptions],
-      },
-    };
-    this.messages = [...this.messages, promptMessage];
-    this.lastConsultantPromptId = promptId;
-    this.activeConsultantPromptId = promptId;
-    this.activeConsultantFollowUpId = null;
-    this.pendingConsultantFollowUpId = null;
-    this.activeConsultantBranchId = null;
-    this.lastConsultantFollowUpId = null;
-    this.lastConsultantFollowUpPayload = null;
-    this.consultantAgentStage = 'ready';
+    this.messages = [...this.messages, result.promptMessage];
+    this.applyConsultantFlowState(result.state);
     this.scrollConversationToBottom();
   }
 
   async handleConsultantFollowUpQuestion(question: ConsultantQuestion) {
-    this.pendingConsultantFollowUpId =
-      this.activeConsultantFollowUpId ?? this.lastConsultantFollowUpId;
-    this.activeConsultantFollowUpId = null;
+    const prepared = prepareConsultantQuestionSend({
+      state: this.getConsultantFlowState(),
+      consultantAgentOptions: this.consultantAgentOptions,
+      question,
+    });
 
-    const branchId = this.activeConsultantBranchId;
-    const payload = {
-      consultantContext: {
-        branchId: branchId ?? null,
-        branchLabel: this.lookupConsultantBranchLabel(branchId),
-        questionId: question.questionId,
-        questionLevel: question.level ?? null,
-      },
-      isConsultantAgent: true,
-    };
-
-    await this.processMessage(question.prompt, payload);
+    this.applyConsultantFlowState(prepared.state);
+    await this.processMessage(question.prompt, prepared.options);
   }
 
   handleConversationSelect(conversationId: string) {
@@ -1355,58 +1183,47 @@ export class RioAssistWidget extends LitElement {
   }
 
   private handleConversationSystemAction(message: RioIncomingMessage) {
-    const action = (message.action ?? '').toLowerCase();
-    if (action === 'conversationrenamed') {
-      const data = message.data as Record<string, unknown>;
-      const id = this.repairConversationId(
-        this.extractString(data, ['conversationId', 'id']) ?? '',
-      );
-      const newTitle = this.extractString(data, ['newTitle', 'title']);
-      if (id && newTitle) {
-        this.applyConversationRename(id, newTitle);
-        this.conversationHistoryError = '';
-        if (
-          this.pendingConversationAction &&
-          this.pendingConversationAction.conversationId === id &&
-          this.pendingConversationAction.action === 'rename'
-        ) {
-          this.pendingConversationAction = null;
-          this.conversationActionError = null;
-        }
+    const parsed = parseConversationSystemAction(message, (rawId) =>
+      this.repairConversationId(rawId),
+    );
+    if (!parsed) {
+      return false;
+    }
+
+    if (parsed.kind === 'rename') {
+      this.applyConversationRename(parsed.conversationId, parsed.newTitle);
+      this.conversationHistoryError = '';
+      if (
+        this.pendingConversationAction &&
+        this.pendingConversationAction.conversationId === parsed.conversationId &&
+        this.pendingConversationAction.action === 'rename'
+      ) {
+        this.pendingConversationAction = null;
+        this.conversationActionError = null;
       }
       return true;
     }
 
-    if (action === 'conversationdeleted') {
-      const data = message.data as Record<string, unknown>;
-      const id = this.repairConversationId(
-        this.extractString(data, ['conversationId', 'id']) ?? '',
-      );
-      if (id) {
-        this.applyConversationDeletion(id);
-        this.conversationHistoryError = '';
-        if (
-          this.pendingConversationAction &&
-          this.pendingConversationAction.conversationId === id &&
-          this.pendingConversationAction.action === 'delete'
-        ) {
-          this.pendingConversationAction = null;
-          this.conversationActionError = null;
-        }
+    if (parsed.kind === 'delete') {
+      this.applyConversationDeletion(parsed.conversationId);
+      this.conversationHistoryError = '';
+      if (
+        this.pendingConversationAction &&
+        this.pendingConversationAction.conversationId === parsed.conversationId &&
+        this.pendingConversationAction.action === 'delete'
+      ) {
+        this.pendingConversationAction = null;
+        this.conversationActionError = null;
       }
       return true;
     }
 
-    if (action === 'processing') {
-      return true;
-    }
-
-    return false;
+    return parsed.kind === 'processing';
   }
 
   private handleConversationActionError(message: RioIncomingMessage) {
-    const action = (message.action ?? '').toLowerCase();
-    if (action !== 'error') {
+    const errorText = resolveConversationActionErrorText(message);
+    if (!errorText) {
       return false;
     }
 
@@ -1416,11 +1233,6 @@ export class RioAssistWidget extends LitElement {
       data,
       raw: message.raw,
     });
-    const errorText =
-      this.extractString(data, ['error', 'message', 'detail', 'description']) ||
-      (typeof message.text === 'string' && message.text.trim()
-        ? message.text
-        : 'O agente retornou um erro ao processar a conversa.');
 
     const pending = this.pendingConversationAction;
     if (pending) {
@@ -1452,34 +1264,6 @@ export class RioAssistWidget extends LitElement {
     this.clearLoadingGuard();
     this.isLoading = false;
     return true;
-  }
-
-  private shouldIgnoreAssistantPayload(action?: string) {
-    if (!action) {
-      return false;
-    }
-    const normalized = action.toLowerCase();
-    return (
-      normalized === 'processing' ||
-      normalized === 'conversationrenamed' ||
-      normalized === 'conversationdeleted'
-    );
-  }
-
-  private extractString(
-    data: Record<string, unknown> | undefined,
-    keys: string[],
-  ): string | null {
-    if (!data || typeof data !== 'object') {
-      return null;
-    }
-    for (const key of keys) {
-      const value = data[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value;
-      }
-    }
-    return null;
   }
 
   handleHeaderActionClick(action: HeaderActionConfig, index: number) {
@@ -1590,17 +1374,7 @@ export class RioAssistWidget extends LitElement {
     this.activeConversationTitle = null;
     this.activeConversationUpdatedAt = null;
     this.showNewConversationShortcut = false;
-    this.showSuggestions = true;
-    this.consultantAgentVisible = false;
-    this.activeConsultantFollowUpId = null;
-    this.activeConsultantBranchId = null;
-    this.activeConsultantPromptId = null;
-    this.consultantAgentStage = 'idle';
-    this.consultantOptionsSuppressed = false;
-    this.pendingConsultantFollowUpId = null;
-    this.lastConsultantPromptId = null;
-    this.lastConsultantFollowUpId = null;
-    this.lastConsultantFollowUpPayload = null;
+    this.applyConsultantFlowState(createInitialConsultantFlowState());
     this.dispatchEvent(
       new CustomEvent('rioassist:new-conversation', {
         bubbles: true,
@@ -1748,258 +1522,39 @@ export class RioAssistWidget extends LitElement {
     await this.processMessage(suggestion);
   }
 
-  private getAudioExtension(mimeType: string) {
-    const normalized = mimeType.toLowerCase();
-    if (normalized.includes('ogg')) {
-      return 'ogg';
-    }
-    if (normalized.includes('mpeg') || normalized.includes('mp3')) {
-      return 'mp3';
-    }
-    if (normalized.includes('wav')) {
-      return 'wav';
-    }
-    if (normalized.includes('mp4') || normalized.includes('m4a')) {
-      return 'm4a';
-    }
-    if (normalized.includes('webm')) {
-      return 'webm';
-    }
-    return 'webm';
-  }
-
-  private createAudioFile(blob: Blob) {
-    const extension = this.getAudioExtension(blob.type || 'audio/webm');
-    const filename = `mensagem-voz-${Date.now()}.${extension}`;
-    return new File([blob], filename, { type: blob.type || 'audio/webm' });
-  }
-
-  private clearVoiceRecorder() {
-    this.voiceRecordingChunks = [];
+  private teardownVoiceRecording() {
+    this.voiceCapture.teardown();
     this.voiceTranscriptSegments = [];
     this.voiceTranscriptPreview = '';
-    if (this.voiceRecorder) {
-      this.voiceRecorder.ondataavailable = null;
-      this.voiceRecorder.onstop = null;
-      this.voiceRecorder = null;
-    }
-  }
-
-  private cleanupVoiceStream() {
-    if (this.voiceRecordingStream) {
-      this.voiceRecordingStream.getTracks().forEach((track) => track.stop());
-      this.voiceRecordingStream = null;
-    }
-  }
-
-  private teardownVoiceRecording() {
-    if (this.voiceRecorder && this.voiceRecorder.state !== 'inactive') {
-      this.voiceRecorder.stop();
-    }
-    this.stopSpeechRecognition();
-    this.cleanupVoiceStream();
-    this.clearVoiceRecorder();
     this.isRecording = false;
     this.isRecordingPaused = false;
   }
 
-  private async requestMicrophoneStream() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      this.errorMessage = 'Seu navegador nao suporta gravacao de audio.';
-      return null;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.microphonePermissionGranted = true;
-      return stream;
-    } catch (error) {
-      this.microphonePermissionGranted = false;
-      console.error('[RioAssist][voice] erro ao acessar microfone', error);
-      this.errorMessage = 'Nao foi possivel acessar o microfone.';
-      return null;
-    }
-  }
-
-  private createVoiceRecorder(stream: MediaStream) {
-    const candidates = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-      'audio/ogg',
-      'audio/mp4',
-    ];
-    const supported = candidates.find((type) =>
-      typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type),
-    );
-
-    return supported ? new MediaRecorder(stream, { mimeType: supported }) : new MediaRecorder(stream);
-  }
-
-  private startSpeechRecognition() {
-    const SpeechRecognitionCtor =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) {
-      this.speechRecognitionAvailable = false;
-      return;
-    }
-
-    this.stopSpeechRecognition();
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.onresult = (event: any) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const transcript = result[0]?.transcript ?? '';
-        if (result.isFinal) {
-          this.voiceTranscriptSegments.push(transcript.trim());
-        } else {
-          interim += transcript;
-        }
-      }
-      this.voiceTranscriptPreview = [...this.voiceTranscriptSegments, interim.trim()]
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-      if (this.voiceTranscriptPreview) {
-        console.info('[RioAssist][voice] transcricao parcial', this.voiceTranscriptPreview);
-      }
-    };
-    recognition.onstart = () => {
-      console.info('[RioAssist][voice] reconhecimento iniciado');
-    };
-    recognition.onaudiostart = () => {
-      console.info('[RioAssist][voice] audio captado (inicio)');
-    };
-    recognition.onaudioend = () => {
-      console.info('[RioAssist][voice] audio captado (fim)');
-    };
-    recognition.onsoundstart = () => {
-      console.info('[RioAssist][voice] som detectado');
-    };
-    recognition.onsoundend = () => {
-      console.info('[RioAssist][voice] som terminou');
-    };
-    recognition.onspeechstart = () => {
-      console.info('[RioAssist][voice] fala detectada');
-    };
-    recognition.onspeechend = () => {
-      console.info('[RioAssist][voice] fala terminou');
-    };
-    recognition.onnomatch = (event: any) => {
-      console.warn('[RioAssist][voice] fala nao reconhecida', event);
-    };
-    recognition.onend = () => {
-      console.info('[RioAssist][voice] reconhecimento encerrado', {
-        isRecording: this.isRecording,
-        isRecordingPaused: this.isRecordingPaused,
-      });
-      if (this.isRecording && !this.isRecordingPaused) {
-        try {
-          recognition.start();
-        } catch (error) {
-          console.warn('[RioAssist][voice] falha ao reiniciar reconhecimento', error);
-        }
-      }
-    };
-    recognition.onerror = (event: any) => {
-      const error = (event && event.error) || '';
-      console.error('[RioAssist][voice] erro no reconhecimento de voz', {
-        error,
-        message: event?.message ?? null,
-        event,
-      });
-      if (
-        error === 'not-allowed' ||
-        error === 'service-not-allowed' ||
-        error === 'not-supported'
-      ) {
-        this.speechRecognitionAvailable = false;
-      }
-    };
-    try {
-      recognition.start();
-      this.speechRecognizer = recognition;
-      this.speechRecognitionAvailable = true;
-    } catch (error) {
-      console.warn('[RioAssist][voice] nao foi possivel iniciar reconhecimento', error);
-      this.speechRecognizer = null;
-      this.speechRecognitionAvailable = false;
-    }
-  }
-
-  private stopSpeechRecognition() {
-    if (!this.speechRecognizer) {
-      return;
-    }
-
-    try {
-      this.speechRecognizer.onresult = null;
-      this.speechRecognizer.onerror = null;
-      this.speechRecognizer.onend = null;
-      this.speechRecognizer.stop();
-    } catch (error) {
-      console.warn('[RioAssist][voice] erro ao interromper reconhecimento', error);
-    }
-    this.speechRecognizer = null;
-  }
-
-  private stopVoiceRecorder() {
-    return new Promise<Blob | null>((resolve) => {
-      const recorder = this.voiceRecorder;
-      if (!recorder) {
-        resolve(null);
-        return;
-      }
-
-      const finalize = () => {
-        recorder.removeEventListener('stop', finalize);
-        const mimeType = recorder.mimeType || 'audio/webm';
-        const blob =
-          this.voiceRecordingChunks.length > 0
-            ? new Blob(this.voiceRecordingChunks, { type: mimeType })
-            : null;
-        resolve(blob);
-      };
-
-      recorder.addEventListener('stop', finalize);
-      if (recorder.state !== 'inactive') {
-        recorder.stop();
-      } else {
-        finalize();
-      }
+  private addVoiceAttachment(blob: Blob, transcript: string) {
+    const result = buildVoiceAttachment({
+      blob,
+      existingFiles: this.selectedFiles,
+      transcriptSegments: transcript ? [transcript] : [],
+      transcriptPreview: transcript,
+      createId: () =>
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : this.randomId(12)),
+      now: () => Date.now(),
     });
-  }
 
-  private addVoiceAttachment(blob: Blob) {
-    if (!blob || blob.size === 0) {
-      return;
-    }
-    if (this.isAttachmentLimitReached) {
-      this.attachmentError = 'Voce pode anexar no maximo 3 arquivos.';
+    if (!result) {
       return;
     }
 
-    const file = this.createAudioFile(blob);
-    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : this.randomId(12);
+    if ('error' in result) {
+      this.attachmentError = result.error ?? '';
+      return;
+    }
 
-    const transcript = this.voiceTranscriptSegments.join(' ').trim() || this.voiceTranscriptPreview;
-
-    const item: AttachmentItem = {
-      id,
-      file,
-      name: file.name,
-      typeLabel: ATTACHMENT_KIND_LABEL.audio,
-      kind: 'audio',
-    };
-
-    this.selectedFiles = [...this.selectedFiles, item];
-    this.voiceAttachmentId = id;
-    this.voiceTranscript = transcript.trim();
+    this.selectedFiles = [...this.selectedFiles, result.item];
+    this.voiceAttachmentId = result.voiceAttachmentId;
+    this.voiceTranscript = result.voiceTranscript;
     this.attachmentError = '';
   }
 
@@ -2008,67 +1563,62 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const stream = await this.requestMicrophoneStream();
-    if (!stream) {
-      return;
-    }
-
-    this.voiceRecordingStream = stream;
-    this.voiceRecordingChunks = [];
     this.voiceTranscriptSegments = [];
     this.voiceTranscriptPreview = '';
     this.voiceTranscript = '';
 
-    const recorder = this.createVoiceRecorder(stream);
-    this.voiceRecorder = recorder;
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        this.voiceRecordingChunks.push(event.data);
-      }
-    };
-    recorder.onstop = () => {
-      this.cleanupVoiceStream();
-    };
+    const started = await this.voiceCapture.start({
+      onTranscriptPreview: (preview, segments) => {
+        this.voiceTranscriptPreview = preview;
+        this.voiceTranscriptSegments = segments;
+      },
+      onSpeechRecognitionAvailabilityChange: (available) => {
+        this.speechRecognitionAvailable = available;
+      },
+      onError: (message) => {
+        this.errorMessage = message;
+      },
+      isRecordingActive: () => this.isRecording,
+      isRecordingPaused: () => this.isRecordingPaused,
+    });
 
-    recorder.start();
+    if (!started) {
+      return;
+    }
+
     this.isRecording = true;
     this.isRecordingPaused = false;
-    this.startSpeechRecognition();
   }
 
   private pauseVoiceRecording() {
-    if (!this.voiceRecorder || !this.isRecording || this.isRecordingPaused) {
+    if (!this.isRecording || this.isRecordingPaused) {
       return;
     }
 
-    if (this.voiceRecorder.state === 'recording') {
-      this.voiceRecorder.pause();
-    }
+    this.voiceCapture.pause();
     this.isRecordingPaused = true;
-    this.stopSpeechRecognition();
   }
 
   private resumeVoiceRecording() {
-    if (!this.voiceRecorder || !this.isRecording || !this.isRecordingPaused) {
+    if (!this.isRecording || !this.isRecordingPaused) {
       return;
     }
 
-    if (this.voiceRecorder.state === 'paused') {
-      this.voiceRecorder.resume();
-    }
+    this.voiceCapture.resume({
+      onTranscriptPreview: (preview, segments) => {
+        this.voiceTranscriptPreview = preview;
+        this.voiceTranscriptSegments = segments;
+      },
+      onSpeechRecognitionAvailabilityChange: (available) => {
+        this.speechRecognitionAvailable = available;
+      },
+      onError: (message) => {
+        this.errorMessage = message;
+      },
+      isRecordingActive: () => this.isRecording,
+      isRecordingPaused: () => this.isRecordingPaused,
+    });
     this.isRecordingPaused = false;
-    this.startSpeechRecognition();
-  }
-
-  handleVoiceCancelClick() {
-    if (!this.isRecording) {
-      return;
-    }
-
-    this.pauseVoiceRecording();
-    this.voiceCancelDialogMode = 'cancel';
-    this.pendingVoiceRemovalId = null;
-    this.voiceCancelDialogOpen = true;
   }
 
   async handleVoiceConfirmClick() {
@@ -2079,24 +1629,22 @@ export class RioAssistWidget extends LitElement {
     this.isRecording = false;
     this.isRecordingPaused = false;
     this.voiceCancelDialogOpen = false;
-    this.stopSpeechRecognition();
-    const blob = await this.stopVoiceRecorder();
-    this.cleanupVoiceStream();
-    if (blob) {
-      this.addVoiceAttachment(blob);
+    const result = await this.voiceCapture.stop();
+    if (result.blob) {
+      this.addVoiceAttachment(result.blob, result.transcript);
     }
-    this.clearVoiceRecorder();
+    this.voiceTranscriptSegments = [];
+    this.voiceTranscriptPreview = '';
   }
 
   private async discardVoiceRecording() {
     this.isRecording = false;
     this.isRecordingPaused = false;
     this.voiceCancelDialogOpen = false;
-    this.stopSpeechRecognition();
-    await this.stopVoiceRecorder();
-    this.cleanupVoiceStream();
-    this.clearVoiceRecorder();
+    await this.voiceCapture.discard();
     this.voiceTranscript = '';
+    this.voiceTranscriptSegments = [];
+    this.voiceTranscriptPreview = '';
   }
 
   handleVoiceDialogConfirm() {
@@ -2166,28 +1714,16 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const next = [...this.selectedFiles];
-    let error = '';
+    const result = addFilesToSelection(this.selectedFiles, files, {
+      createId: () =>
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : this.randomId(12)),
+      createPreviewUrl: (file) => URL.createObjectURL(file),
+    });
 
-    for (const file of files) {
-      if (next.length >= MAX_ATTACHMENT_COUNT) {
-        error = 'Voce pode anexar no maximo 3 arquivos.';
-        break;
-      }
-
-      const { item, error: itemError } = this.buildAttachmentItem(file);
-      if (itemError) {
-        error = itemError;
-        continue;
-      }
-
-      if (item) {
-        next.push(item);
-      }
-    }
-
-    this.selectedFiles = next;
-    this.attachmentError = error;
+    this.selectedFiles = result.files;
+    this.attachmentError = result.error;
 
     previousFiles.forEach((item) => {
       if (item.previewUrl && !this.selectedFiles.find((entry) => entry.id === item.id)) {
@@ -2197,16 +1733,17 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleAttachmentRemove(id: string) {
-    const removed = this.selectedFiles.find((item) => item.id === id);
+    const removal = removeAttachmentById(this.selectedFiles, id);
+    const removed = removal.removed;
     if (removed?.kind === 'audio') {
       this.handleVoiceAttachmentRemove(id);
       return;
     }
-    this.selectedFiles = this.selectedFiles.filter((item) => item.id !== id);
+    this.selectedFiles = removal.files;
     if (removed?.previewUrl) {
       URL.revokeObjectURL(removed.previewUrl);
     }
-    if (this.selectedFiles.length === 0) {
+    if (removal.shouldClearError) {
       this.attachmentError = '';
     }
   }
@@ -2335,10 +1872,7 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    this.consultantOptionsSuppressed = true;
-    this.activeConsultantFollowUpId = null;
-    this.activeConsultantPromptId = null;
-    this.pendingConsultantFollowUpId = null;
+    this.applyConsultantFlowState(suppressConsultantPrompts(this.getConsultantFlowState()));
     await this.processMessage(this.message, { attachments: this.selectedFiles });
   }
 
@@ -2371,51 +1905,32 @@ export class RioAssistWidget extends LitElement {
       hidden?: boolean;
     },
   ): ChatMessage {
-    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random()}`;
-
-    return {
-      id,
+    return this.createChatMessage({
       role,
       text,
-      html: this.renderMarkdown(text),
-      timestamp: Date.now(),
+      consultantFollowUp,
       request: options?.request,
       responseTo: options?.responseTo,
       hidden: options?.hidden,
-      consultantFollowUp,
-    };
+    });
   }
 
   private async processMessage(
     rawValue: string,
-    options: {
-      consultantContext?: {
-        branchId: string | null;
-        branchLabel: string | null;
-        questionId: string;
-        questionLevel: string | null;
-      } | null;
-      isConsultantAgent?: boolean;
-      suppressUserMessage?: boolean;
-      responseToMessageId?: string;
-      forcePayload?: {
-        contentToSend: string;
-        contentToDisplay: string;
-        quickResponse: boolean;
-      };
-      attachments?: AttachmentItem[];
-    } | null = null,
+    options: OutgoingMessageOptions<AttachmentItem> | null = null,
   ) {
-    const content = rawValue.trim();
-    if (!content || this.isLoading) {
+    const prepared = prepareOutgoingMessage({
+      rawValue,
+      isLoading: this.isLoading,
+      quickResponse: this.quickResponse,
+      hasMessages: this.messages.length > 0,
+      options,
+      createMessage: (input) => this.createChatMessage(input),
+    });
+
+    if (!prepared) {
       return;
     }
-
-    const quickResponse = options?.forcePayload?.quickResponse ?? this.quickResponse;
-    const contentToSend = options?.forcePayload?.contentToSend ?? content;
-    const contentToDisplay = options?.forcePayload?.contentToDisplay ?? content;
 
     if (!this.currentConversationId) {
       this.currentConversationId = null;
@@ -2423,57 +1938,29 @@ export class RioAssistWidget extends LitElement {
       this.activeConversationUpdatedAt = null;
     }
 
-    const wasEmptyConversation = this.messages.length === 0;
-
     this.dispatchEvent(
       new CustomEvent('rioassist:send', {
         detail: {
-          message: content,
+          message: prepared.content,
           apiBaseUrl: this.apiBaseUrl,
           hasToken: Boolean(this.rioToken.trim()),
           tokenPreview: this.getTokenPreview(this.rioToken),
           consultantContext: options?.consultantContext ?? null,
           isConsultantAgent: options?.isConsultantAgent ?? false,
-          quickResponse,
-          attachments: options?.attachments?.map((item) => item.file) ?? [],
+          quickResponse: prepared.requestPayload.quickResponse,
+          attachments: prepared.attachments.map((item) => item.file),
         },
         bubbles: true,
         composed: true,
       }),
     );
 
-    const requestPayload: ChatMessage['request'] = {
-      text: contentToDisplay,
-      toSend: contentToSend,
-      quickResponse,
-      consultantContext: options?.consultantContext ?? null,
-      isConsultantAgent: options?.isConsultantAgent ?? false,
-    };
-
-    if (!options?.suppressUserMessage) {
-      const userMessage = this.createMessage('user', contentToDisplay, undefined, {
-        request: requestPayload,
-      });
-      this.messages = [...this.messages, userMessage];
-      this.pendingResponseTo = {
-        messageId: userMessage.id,
-        requestText: requestPayload.text,
-        requestToSend: requestPayload.toSend,
-        quickResponse: requestPayload.quickResponse,
-        consultantContext: requestPayload.consultantContext ?? null,
-        isConsultantAgent: requestPayload.isConsultantAgent ?? false,
-      };
-    } else {
-      this.pendingResponseTo = {
-        messageId: options?.responseToMessageId ?? 'resend',
-        requestText: requestPayload.text,
-        requestToSend: requestPayload.toSend,
-        quickResponse: requestPayload.quickResponse,
-        consultantContext: requestPayload.consultantContext ?? null,
-        isConsultantAgent: requestPayload.isConsultantAgent ?? false,
-      };
+    if (prepared.userMessage) {
+      this.messages = [...this.messages, prepared.userMessage];
     }
-    if (wasEmptyConversation) {
+    this.pendingResponseTo = prepared.pendingResponse;
+
+    if (prepared.shouldRefreshConversations) {
       this.showNewConversationShortcut = true;
       this.refreshConversationsAfterResponse = true;
     }
@@ -2484,20 +1971,12 @@ export class RioAssistWidget extends LitElement {
 
     try {
       const client = this.ensureRioClient();
-      const extraPayload = {
-        quickResponse,
-        ...(options && (options.consultantContext || options.isConsultantAgent)
-          ? {
-              isConsultantAgent: Boolean(options.isConsultantAgent),
-              consultantContext: options.consultantContext ?? null,
-            }
-          : {}),
-      };
-      await client.sendMessage(contentToSend, this.currentConversationId, extraPayload);
-      if (options?.attachments?.length) {
+      const extraPayload = buildWebsocketExtraPayload(prepared.requestPayload);
+      await client.sendMessage(prepared.contentToSend, this.currentConversationId, extraPayload);
+      if (prepared.attachments.length) {
         const hadVoice =
           this.voiceAttachmentId &&
-          options.attachments.some((item) => item.id === this.voiceAttachmentId);
+          prepared.attachments.some((item) => item.id === this.voiceAttachmentId);
         this.selectedFiles.forEach((item) => {
           if (item.previewUrl) {
             URL.revokeObjectURL(item.previewUrl);
@@ -2555,43 +2034,30 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    if (this.shouldIgnoreAssistantPayload(message.action)) {
+    if (shouldIgnoreAssistantPayload(message.action)) {
       return;
     }
 
-    const incomingConversationId = this.extractConversationId(message.data);
+    const incomingConversationId = extractConversationIdFromPayload(
+      message.data,
+      (rawId) => this.repairConversationId(rawId),
+    );
     const incomingConversationTitle = typeof (message.data as any)?.conversationTitle === 'string'
       ? (message.data as any).conversationTitle.trim()
       : '';
     if (incomingConversationId) {
-      const existingIndex = this.conversations.findIndex(
-        (conv) => conv.id === incomingConversationId,
-      );
-      // Check if this is a NEW conversation that's not in the sidebar yet
-      const isNewConversation = existingIndex === -1;
-
-      if (incomingConversationTitle) {
-        const updatedAt = new Date().toISOString();
-        if (isNewConversation) {
-          this.conversations = [
-            { id: incomingConversationId, title: incomingConversationTitle, updatedAt },
-            ...this.conversations,
-          ];
-        } else {
-          const existing = this.conversations[existingIndex];
-          const next = [...this.conversations];
-          next.splice(existingIndex, 1);
-          next.unshift({
-            ...existing,
-            title: incomingConversationTitle,
-            updatedAt,
-          });
-          this.conversations = next;
-        }
-        this.activeConversationTitle = incomingConversationTitle;
-        this.activeConversationUpdatedAt = updatedAt;
+      const syncResult = syncConversationFromIncomingMessage({
+        conversations: this.conversations,
+        incomingConversationId,
+        incomingConversationTitle,
+        nowIsoString: new Date().toISOString(),
+      });
+      this.conversations = syncResult.conversations;
+      if (syncResult.activeConversationTitle) {
+        this.activeConversationTitle = syncResult.activeConversationTitle;
+        this.activeConversationUpdatedAt = syncResult.activeConversationUpdatedAt;
       }
-      if (isNewConversation) {
+      if (syncResult.isNewConversation) {
         // Force refresh of conversation list for brand new conversations
         this.refreshConversationsAfterResponse = false;
         console.info('[RioAssist][ws] nova conversa detectada, atualizando lista', {
@@ -2617,66 +2083,29 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const responseTo = this.pendingResponseTo
-      ? {
-          messageId: this.pendingResponseTo.messageId,
-          requestText: this.pendingResponseTo.requestText,
-          requestToSend: this.pendingResponseTo.requestToSend,
-          quickResponse: this.pendingResponseTo.quickResponse,
-          consultantContext: this.pendingResponseTo.consultantContext ?? null,
-          isConsultantAgent: this.pendingResponseTo.isConsultantAgent ?? false,
-        }
-      : undefined;
-    const assistantMessage = this.createMessage('assistant', message.text, undefined, {
-      responseTo,
+    const assistantMessage = createAssistantResponseMessage({
+      text: message.text,
+      pendingResponse: this.pendingResponseTo,
+      createMessage: (input) => this.createChatMessage(input),
     });
     this.messages = [...this.messages, assistantMessage];
     this.pendingResponseTo = null;
     this.clearLoadingGuard();
     this.isLoading = false;
 
-    if (this.consultantAgentStage === 'awaiting') {
-      const promptId = this.randomId(12);
-      const promptMessage: ChatMessage = {
-        ...this.createMessage('assistant', 'Em qual assunto posso ajudar você hoje?'),
-        consultantPrompt: {
-          id: promptId,
-          text: 'Em qual assunto posso ajudar você hoje?',
-          options: [...this.consultantAgentOptions],
-        },
-      };
-      this.messages = [...this.messages, promptMessage];
-      this.consultantAgentStage = 'ready';
-      this.activeConsultantPromptId = promptId;
-      this.lastConsultantPromptId = promptId;
+    const consultantEffects = applyConsultantEffectsAfterAssistantMessage({
+      state: this.getConsultantFlowState(),
+      consultantAgentOptions: this.consultantAgentOptions,
+      createMessage: (role, text, consultantFollowUp, options) =>
+        this.createMessage(role, text, consultantFollowUp, options),
+      createId: (length) => this.randomId(length),
+    });
+
+    if (consultantEffects.messages.length > 0) {
+      this.messages = [...this.messages, ...consultantEffects.messages];
     }
+    this.applyConsultantFlowState(consultantEffects.state);
 
-    if (
-      !this.consultantOptionsSuppressed &&
-      this.lastConsultantFollowUpPayload &&
-      (this.pendingConsultantFollowUpId || this.lastConsultantFollowUpId)
-    ) {
-      const followUpId = this.randomId(12);
-      const followUpMessage = this.createMessage(
-        'assistant',
-        buildConsultantFollowUpText(this.lastConsultantFollowUpPayload.topicLabel),
-        {
-          id: followUpId,
-          topicId: this.lastConsultantFollowUpPayload.topicId,
-          topicLabel: this.lastConsultantFollowUpPayload.topicLabel,
-          questions: this.lastConsultantFollowUpPayload.questions,
-        },
-      );
-
-      this.messages = [...this.messages, followUpMessage];
-      this.activeConsultantFollowUpId = followUpId;
-      this.pendingConsultantFollowUpId = null;
-      this.lastConsultantFollowUpId = followUpId;
-    }
-
-    // BUGFIX 2026-01-12: Adicionar await para evitar race condition
-    // Sem await, a flag era resetada antes da resposta chegar,
-    // fazendo novas conversas não aparecerem na lista
     if (this.refreshConversationsAfterResponse) {
       this.refreshConversationsAfterResponse = false;
       await this.requestConversationHistory();
@@ -2719,15 +2148,18 @@ export class RioAssistWidget extends LitElement {
   }
 
   private handleHistoryPayload(payload: unknown) {
-    const entries = this.extractHistoryEntries(payload);
-    const conversationId = this.extractConversationId(payload);
+    const entries = extractHistoryEntries(payload);
+    const conversationId = extractConversationIdFromPayload(
+      payload,
+      (rawId) => this.repairConversationId(rawId),
+    );
 
     if (conversationId !== null && conversationId !== undefined) {
       this.applyMessageHistory(entries, conversationId);
       return;
     }
 
-    if (this.isMessageHistoryEntries(entries)) {
+    if (isMessageHistoryEntries(entries)) {
       this.applyMessageHistory(entries);
       return;
     }
@@ -2740,26 +2172,7 @@ export class RioAssistWidget extends LitElement {
   }
 
   private isHistoryPayload(message: RioIncomingMessage) {
-    if (
-      typeof message.action === 'string' &&
-      message.action.toLowerCase().includes('history')
-    ) {
-      return true;
-    }
-
-    const data = message.data;
-    if (data && typeof data === 'object') {
-      const action = (data as any).action;
-      if (typeof action === 'string' && action.toLowerCase().includes('history')) {
-        return true;
-      }
-
-      if (Array.isArray((data as any).history) || Array.isArray((data as any).conversations)) {
-        return true;
-      }
-    }
-
-    return false;
+    return isHistoryPayloadMessage(message);
   }
 
   private logHistoryPayload(message: RioIncomingMessage) {
@@ -2781,17 +2194,10 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const map = new Map<string, ConversationItem>();
-
-    entries.forEach((entry, index) => {
+    entries.forEach((entry) => {
       if (!entry || typeof entry !== 'object') {
         return;
       }
-
-      const normalized = this.normalizeConversationItem(
-        entry as Record<string, unknown>,
-        index,
-      );
 
       const rawId =
         (entry as Record<string, unknown>).conversationId ??
@@ -2802,33 +2208,16 @@ export class RioAssistWidget extends LitElement {
       if (rawId) {
         console.info('[RioAssist][history] conversa recebida do backend', {
           rawId,
-          normalizedId: normalized?.id ?? null,
+          normalizedId: this.repairConversationId(String(rawId)),
           entry,
         });
       }
-
-      if (!normalized) {
-        return;
-      }
-
-      const current = map.get(normalized.id);
-      if (!current) {
-        map.set(normalized.id, normalized);
-        return;
-      }
-
-      const currentTime = Date.parse(current.updatedAt);
-      const nextTime = Date.parse(normalized.updatedAt);
-
-      if (Number.isFinite(nextTime) && nextTime > currentTime) {
-        map.set(normalized.id, normalized);
-      }
     });
 
-    const conversations = Array.from(map.values()).sort((a, b) => {
-      const order = Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-      return Number.isFinite(order) ? order : 0;
-    });
+    const conversations = normalizeConversationHistory(
+      entries,
+      (rawId) => this.repairConversationId(rawId),
+    );
 
     this.conversations = conversations;
     this.conversationHistoryLoading = false;
@@ -2848,9 +2237,7 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const normalized = entries.flatMap((entry, index) =>
-      this.normalizeHistoryMessages(entry as Record<string, unknown>, index),
-    );
+    const normalized = normalizeMessageHistory(entries, (content) => this.renderMarkdown(content));
 
     if (conversationId) {
       this.currentConversationId = conversationId;
@@ -2868,114 +2255,6 @@ export class RioAssistWidget extends LitElement {
       conversationId: conversationId ?? null,
       total: normalized.length,
     });
-  }
-
-  private extractHistoryEntries(payload: unknown): unknown[] {
-    if (Array.isArray(payload)) {
-      return payload;
-    }
-
-    if (payload && typeof payload === 'object') {
-      const record = payload as Record<string, unknown>;
-      const candidates = [
-        record.history,
-        record.conversations,
-        record.data,
-        record.items,
-        record.messages,
-      ];
-
-      for (const candidate of candidates) {
-        if (Array.isArray(candidate)) {
-          return candidate;
-        }
-      }
-
-      if (record.data && typeof record.data === 'object' && !Array.isArray(record.data)) {
-        const nested = this.extractHistoryEntries(record.data);
-        if (nested.length > 0) {
-          return nested;
-        }
-      }
-    }
-
-    return [];
-  }
-
-  private extractConversationId(payload: unknown): string | null | undefined {
-    if (payload && typeof payload === 'object') {
-      const record = payload as Record<string, unknown>;
-      const candidates = [
-        record.conversationId,
-        record.conversationUUID,
-        record.conversationUuid,
-        record.uuid,
-        record.id,
-      ];
-
-      for (const candidate of candidates) {
-        if (candidate === null) {
-          return null;
-        }
-
-        if (candidate !== undefined) {
-          return this.repairConversationId(String(candidate));
-        }
-      }
-    }
-
-    return undefined;
-  }
-
-  private isMessageHistoryEntries(entries: unknown[]) {
-    return entries.some((entry) => this.looksLikeMessageHistoryEntry(entry));
-  }
-
-  private looksLikeMessageHistoryEntry(entry: unknown) {
-    return isMessageHistoryEntry(entry);
-  }
-
-  private normalizeConversationItem(
-    value: Record<string, unknown>,
-    index: number,
-  ): ConversationItem | null {
-    const rawId =
-      value.conversationId ??
-      value.conversationUUID ??
-      value.conversationUuid ??
-      value.uuid ??
-      value.id;
-
-    const idRaw = rawId !== undefined && rawId !== null ? String(rawId) : `history-${index + 1}`;
-    const id = this.repairConversationId(idRaw);
-
-    const rawTitle =
-      value.title ??
-      value.name ??
-      value.topic ??
-      value.subject ??
-      value.question ??
-      value.query ??
-      value.message;
-
-    const title =
-      typeof rawTitle === 'string' && rawTitle.trim().length > 0
-        ? rawTitle.trim()
-        : `Conversa ${index + 1}`;
-
-    const rawUpdated =
-      value.updatedAt ??
-      value.updated_at ??
-      value.lastMessageAt ??
-      value.last_message_at ??
-      value.createdAt ??
-      value.created_at ??
-      value.timestamp ??
-      value.date;
-
-    const updatedAt = this.toIsoString(rawUpdated);
-
-    return { id, title, updatedAt };
   }
 
   private normalizeHistoryMessages(
@@ -3127,18 +2406,6 @@ export class RioAssistWidget extends LitElement {
     return found ? found.updatedAt : null;
   }
 
-  private lookupConsultantBranchLabel(branchId: string | null): string | null {
-    if (!branchId) {
-      return null;
-    }
-
-    const found = this.consultantAgentOptions.find(
-      (item) => item.branchId === branchId || item.id === branchId,
-    );
-
-    return found ? found.label : null;
-  }
-
   private syncActiveConversationMeta() {
     if (!this.currentConversationId) {
       return;
@@ -3150,10 +2417,6 @@ export class RioAssistWidget extends LitElement {
       this.activeConversationTitle = title;
     }
     this.activeConversationUpdatedAt = updatedAt;
-  }
-
-  private toIsoString(value: unknown) {
-    return toHistoryIsoString(value);
   }
 
   private startLoadingGuard() {
@@ -3211,64 +2474,7 @@ export class RioAssistWidget extends LitElement {
   }
 
   private renderMarkdown(content: string) {
-    const rendered = this.markdownRenderer.render(content);
-    const clean = DOMPurify.sanitize(rendered, {
-      ALLOWED_TAGS: [
-        'a',
-        'p',
-        'ul',
-        'ol',
-        'li',
-        'code',
-        'pre',
-        'strong',
-        'em',
-        'blockquote',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'th',
-        'td',
-        'del',
-        'hr',
-        'br',
-        'img',
-        'span',
-        'input',
-      ],
-      ALLOWED_ATTR: [
-        'href',
-        'title',
-        'target',
-        'rel',
-        'src',
-        'alt',
-        'class',
-        'type',
-        'checked',
-        'disabled',
-        'aria-label',
-      ],
-      ALLOW_DATA_ATTR: false,
-      FORBID_TAGS: ['style', 'script'],
-      USE_PROFILES: { html: true },
-    });
-
-    const container = document.createElement('div');
-    container.innerHTML = clean;
-
-    container.querySelectorAll('a').forEach((anchor) => {
-      anchor.setAttribute('target', '_blank');
-      anchor.setAttribute('rel', 'noopener noreferrer');
-    });
-
-    container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-      checkbox.setAttribute('disabled', '');
-      checkbox.setAttribute('tabindex', '-1');
-    });
-
-    return container.innerHTML;
+    return this.markdownRenderer.render(content);
   }
 
   render() {
@@ -3285,4 +2491,8 @@ declare global {
 if (!customElements.get('rio-assist-widget')) {
   customElements.define('rio-assist-widget', RioAssistWidget);
 }
+
+
+
+
 
