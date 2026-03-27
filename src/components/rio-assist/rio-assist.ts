@@ -1,6 +1,9 @@
 import { LitElement, type PropertyValues } from 'lit';
 import { widgetStyles } from './rio-assist.styles';
 import { renderRioAssist } from './rio-assist.template';
+import * as conversationController from './conversation-controller';
+import * as consultantController from './consultant-controller';
+import * as mediaController from './media-controller';
 import {
   RioWebsocketClient,
   type RioIncomingMessage,
@@ -806,134 +809,65 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleConsultantAgentOpen() {
-    const result = startConsultantFlow({
-      state: this.getConsultantFlowState(),
-      consultantAgentOptions: this.consultantAgentOptions,
-      consultantAgentInitialMessage: this.consultantAgentInitialMessage,
-      defaultInitialMessage: DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE,
-      createMessage: (role, text, consultantFollowUp, options) =>
-        this.createMessage(role, text, consultantFollowUp, options),
-    });
-
-    if (!result) {
-      return;
-    }
-
-    if (result.shouldBootstrapOptions) {
-      void this.bootstrapConsultantAgent();
-    }
-
-    this.messages = [...this.messages, result.introMessage];
-    this.applyConsultantFlowState(result.state);
-
-    void this.processMessage(result.initialPrompt, { suppressUserMessage: true });
+    consultantController.handleConsultantAgentOpen(
+      this.getConsultantControllerHost(),
+      DEFAULT_CONSULTANT_AGENT_INITIAL_MESSAGE,
+    );
   }
 
   handleConsultantAgentOption(option: ConsultantAgentOption) {
-    const result = selectConsultantSubject({
+    consultantController.handleConsultantAgentOption(
+      this.getConsultantControllerHost(),
       option,
-      hasMessages: this.messages.length > 0,
-      consultantAgentIntro: this.consultantAgentIntro,
-      createMessage: (role, text, consultantFollowUp, options) =>
-        this.createMessage(role, text, consultantFollowUp, options),
-      createId: (length) => this.randomId(length),
-      state: this.getConsultantFlowState(),
-    });
-
-    if (!result) {
-      return;
-    }
-
-    this.messages = [...this.messages, ...result.messages];
-    this.applyConsultantFlowState(result.state);
-    this.errorMessage = '';
-    this.showNewConversationShortcut = true;
-    this.requestUpdate();
-    this.scrollConversationToBottom();
+    );
   }
 
   handleConsultantChooseAnotherSubject() {
-    const result = reopenConsultantPrompt({
-      state: this.getConsultantFlowState(),
-      consultantAgentOptions: this.consultantAgentOptions,
-      createMessage: (role, text, consultantFollowUp, options) =>
-        this.createMessage(role, text, consultantFollowUp, options),
-      createId: (length) => this.randomId(length),
-    });
-    if (!result) {
-      return;
-    }
-    this.messages = [...this.messages, result.promptMessage];
-    this.applyConsultantFlowState(result.state);
-    this.scrollConversationToBottom();
+    consultantController.handleConsultantChooseAnotherSubject(
+      this.getConsultantControllerHost(),
+    );
   }
 
   async handleConsultantFollowUpQuestion(question: ConsultantQuestion) {
-    const prepared = prepareConsultantQuestionSend({
-      state: this.getConsultantFlowState(),
-      consultantAgentOptions: this.consultantAgentOptions,
+    await consultantController.handleConsultantFollowUpQuestion(
+      this.getConsultantControllerHost(),
       question,
-    });
-
-    this.applyConsultantFlowState(prepared.state);
-    await this.processMessage(question.prompt, prepared.options);
+    );
   }
 
   handleConversationSelect(conversationId: string) {
-    if (!conversationId) {
-      return;
-    }
-
-    const selection = selectConversationState(conversationId, this.conversations);
-    this.showConversations = false;
-    this.conversationMenuId = null;
-    this.errorMessage = '';
-    this.currentConversationId = selection.currentConversationId;
-    this.activeConversationTitle = selection.activeConversationTitle;
-
-    console.info('[RioAssist][history] carregando conversa', conversationId);
-    this.requestConversationHistory(conversationId);
+    return conversationController.handleConversationSelect(
+      this.getConversationControllerHost(),
+      conversationId,
+    );
   }
 
   handleConversationSearch(event: InputEvent) {
-    this.conversationSearch = (event.target as HTMLInputElement).value;
+    this.conversationSearch = conversationController.handleConversationSearch(event);
   }
 
   handleConversationMenuToggle(event: Event, id: string) {
-    event.stopPropagation();
-    const button = event.currentTarget as HTMLElement;
-    const container = this.renderRoot.querySelector(
-      '.conversations-panel__surface',
-    ) as HTMLElement | null;
-    const nextState = selectConversationMenuState({
-      currentMenuId: this.conversationMenuId,
-      targetId: id,
-      buttonRect: button?.getBoundingClientRect() ?? null,
-      containerRect: container?.getBoundingClientRect() ?? null,
-    });
-    this.conversationMenuId = nextState.conversationMenuId;
-    this.conversationMenuPlacement = nextState.conversationMenuPlacement;
+    conversationController.handleConversationMenuToggle(
+      this.getConversationControllerHost(),
+      event,
+      id,
+      this.renderRoot,
+    );
   }
 
   handleConversationsPanelPointer(event: PointerEvent) {
-    const target = event.target as HTMLElement;
-    if (shouldCloseConversationMenu(target)) {
-      this.conversationMenuId = null;
-    }
+    conversationController.handleConversationsPanelPointer(
+      this.getConversationControllerHost(),
+      event,
+    );
   }
 
   handleConversationAction(action: 'rename' | 'delete', id: string) {
-    this.conversationMenuId = null;
-    const targetState = createConversationActionTarget({
+    conversationController.handleConversationAction(
+      this.getConversationControllerHost(),
       action,
       id,
-      conversations: this.conversations,
-    });
-    if (!targetState) {
-      return;
-    }
-    this.deleteConversationTarget = targetState.deleteConversationTarget;
-    this.renameConversationTarget = targetState.renameConversationTarget;
+    );
   }
 
   handleHomeNavigation() {
@@ -1009,260 +943,45 @@ export class RioAssistWidget extends LitElement {
   }
 
   async confirmDeleteConversation() {
-    const target = this.deleteConversationTarget;
-    if (!target) {
-      return;
-    }
-
-    this.pendingConversationAction = createPendingDeleteAction({
-      target,
-      conversations: this.conversations,
-      currentConversationId: this.currentConversationId,
-      messages: this.messages,
-      nowIsoString: new Date().toISOString(),
-    });
-
-    const success = await this.dispatchConversationAction(
-      'delete',
-      { id: target.id, title: target.title },
-      target.index,
-    );
-    if (success) {
-      this.deleteConversationTarget = null;
-      return;
-    }
-
-    this.pendingConversationAction = null;
+    await conversationController.confirmDeleteConversation(this.getConversationControllerHost());
   }
 
   cancelDeleteConversation() {
-    this.deleteConversationTarget = null;
+    conversationController.cancelDeleteConversation(this.getConversationControllerHost());
   }
 
   handleRenameDraft(event: InputEvent) {
-    if (!this.renameConversationTarget) {
-      return;
-    }
-
-    this.renameConversationTarget = updateRenameDraft(
-      this.renameConversationTarget,
-      (event.target as HTMLInputElement).value,
-    );
+    conversationController.handleRenameDraft(this.getConversationControllerHost(), event);
   }
 
   async confirmRenameConversation() {
-    const target = this.renameConversationTarget;
-    if (!target) {
-      return;
-    }
-
-    const newTitle = target.draft.trim();
-    if (!newTitle) {
-      return;
-    }
-
-    this.pendingConversationAction = createPendingRenameAction({
-      ...target,
-      draft: newTitle,
-    });
-
-    const success = await this.dispatchConversationAction(
-      'rename',
-      { id: target.id, title: newTitle },
-      target.index,
-      newTitle,
-    );
-    if (success) {
-      this.renameConversationTarget = null;
-      return;
-    }
-
-    this.pendingConversationAction = null;
+    await conversationController.confirmRenameConversation(this.getConversationControllerHost());
   }
 
   cancelRenameConversation() {
-    this.renameConversationTarget = null;
+    conversationController.cancelRenameConversation(this.getConversationControllerHost());
   }
 
   cancelConversationActionError() {
-    this.conversationActionError = null;
-    this.pendingConversationAction = null;
+    conversationController.cancelConversationActionError(this.getConversationControllerHost());
   }
 
   async retryConversationAction() {
-    const errorState = this.conversationActionError;
-    if (!errorState) {
-      return;
-    }
-
-    this.pendingConversationAction = createRetryConversationAction({
-      errorState,
-      conversations: this.conversations,
-      nowIsoString: new Date().toISOString(),
-    });
-
-    this.conversationActionError = null;
-
-    await this.dispatchConversationAction(
-      errorState.action,
-      { id: errorState.conversationId, title: errorState.newTitle ?? errorState.originalTitle },
-      this.pendingConversationAction.index,
-      errorState.newTitle,
-    );
-  }
-
-  private async dispatchConversationAction(
-    action: 'rename' | 'delete',
-    conversation: Pick<ConversationItem, 'id' | 'title'>,
-    index: number,
-    newTitle?: string,
-  ) {
-    const eventName = createConversationActionEventName(action);
-    const detail = createConversationActionEventDetail({
-      action,
-      conversation,
-      index,
-    });
-
-    const allowed = this.dispatchEvent(
-      new CustomEvent(eventName, {
-        detail,
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-      }),
-    );
-
-    if (!allowed) {
-      return false;
-    }
-
-    if (action === 'delete') {
-      const ok = await this.syncConversationDeleteBackend(conversation.id);
-      return ok;
-    }
-
-    if (action === 'rename' && newTitle) {
-      const ok = await this.syncConversationRenameBackend(conversation.id, newTitle);
-      return ok;
-    }
-
-    return false;
-  }
-
-  private async syncConversationRenameBackend(conversationId: string, newTitle: string) {
-    try {
-      const client = this.ensureRioClient();
-      console.info('[RioAssist][ws] enviando renameConversation', {
-        conversationId,
-        newTitle,
-      });
-      await client.renameConversation(conversationId, newTitle);
-      this.applyConversationRename(conversationId, newTitle);
-      this.conversationHistoryError = createConversationActionSuccessState().conversationHistoryError;
-      return true;
-    } catch (error) {
-      console.error('[RioAssist][history] erro ao renomear conversa', error);
-      this.conversationHistoryError = createConversationActionFailureMessage('rename', error);
-      return false;
-    }
-  }
-
-  private async syncConversationDeleteBackend(conversationId: string) {
-    try {
-      const client = this.ensureRioClient();
-      await client.deleteConversation(conversationId);
-      this.applyConversationDeletion(conversationId);
-      this.conversationHistoryError = createConversationActionSuccessState().conversationHistoryError;
-      return true;
-    } catch (error) {
-      console.error('[RioAssist][history] erro ao excluir conversa', error);
-      this.conversationHistoryError = createConversationActionFailureMessage('delete', error);
-      return false;
-    }
+    await conversationController.retryConversationAction(this.getConversationControllerHost());
   }
 
   private handleConversationSystemAction(message: RioIncomingMessage) {
-    const parsed = parseConversationSystemAction(message, (rawId) =>
-      this.repairConversationId(rawId),
+    return conversationController.handleConversationSystemAction(
+      this.getConversationControllerHost(),
+      message,
     );
-    if (!parsed) {
-      return false;
-    }
-
-    if (parsed.kind === 'rename') {
-      this.applyConversationRename(parsed.conversationId, parsed.newTitle);
-      const nextState = applyConversationSystemActionState({
-        pendingConversationAction: this.pendingConversationAction,
-        conversationId: parsed.conversationId,
-        action: 'rename',
-      });
-      this.conversationHistoryError = nextState.conversationHistoryError;
-      this.pendingConversationAction = nextState.pendingConversationAction;
-      if (nextState.conversationActionError === null) {
-        this.conversationActionError = null;
-      }
-      return true;
-    }
-
-    if (parsed.kind === 'delete') {
-      this.applyConversationDeletion(parsed.conversationId);
-      const nextState = applyConversationSystemActionState({
-        pendingConversationAction: this.pendingConversationAction,
-        conversationId: parsed.conversationId,
-        action: 'delete',
-      });
-      this.conversationHistoryError = nextState.conversationHistoryError;
-      this.pendingConversationAction = nextState.pendingConversationAction;
-      if (nextState.conversationActionError === null) {
-        this.conversationActionError = null;
-      }
-      return true;
-    }
-
-    return parsed.kind === 'processing';
   }
 
   private handleConversationActionError(message: RioIncomingMessage) {
-    const errorText = resolveConversationActionErrorText(message);
-    if (!errorText) {
-      return false;
-    }
-
-    const data = message.data as Record<string, unknown>;
-    console.error('[RioAssist][ws] erro em acao de conversa recebido do backend', {
-      text: message.text,
-      data,
-      raw: message.raw,
-    });
-
-    const pending = this.pendingConversationAction;
-    if (pending) {
-      if (pending.action === 'rename') {
-        this.applyConversationRename(pending.conversationId, pending.originalTitle);
-      }
-
-      if (pending.action === 'delete') {
-        this.restoreConversationSnapshot(pending.snapshot, pending.index);
-        if (pending.wasActive) {
-          this.currentConversationId = pending.conversationId;
-          this.activeConversationTitle = pending.originalTitle;
-          this.activeConversationUpdatedAt = pending.snapshot?.updatedAt ?? null;
-          this.messages = pending.messagesSnapshot ?? this.messages;
-        }
-      }
-
-      this.conversationActionError = applyConversationActionErrorState(pending, errorText);
-      this.pendingConversationAction = null;
-      this.loadingGuard.clear();
-      this.isLoading = false;
-      return true;
-    }
-
-    this.errorMessage = errorText;
-    this.loadingGuard.clear();
-    this.isLoading = false;
-    return true;
+    return conversationController.handleConversationActionError(
+      this.getConversationControllerHost(),
+      message,
+    );
   }
 
   handleHeaderActionClick(action: HeaderActionConfig, index: number) {
@@ -1499,6 +1218,18 @@ export class RioAssistWidget extends LitElement {
     };
   }
 
+  private getConversationControllerHost() {
+    return this as unknown as conversationController.ConversationHost;
+  }
+
+  private getConsultantControllerHost() {
+    return this as unknown as consultantController.ConsultantHost;
+  }
+
+  private getMediaControllerHost() {
+    return this as unknown as mediaController.MediaHost;
+  }
+
   private applyPanelVisibilityState(state: Partial<PanelVisibilityState>) {
     if (typeof state.open === 'boolean') {
       this.open = state.open;
@@ -1534,136 +1265,31 @@ export class RioAssistWidget extends LitElement {
   }
 
   private teardownVoiceRecording() {
-    this.voiceCapture.teardown();
-    const resetState = createVoiceRecordingDiscardedState();
-    this.voiceTranscript = resetState.voiceTranscript;
-    this.voiceTranscriptSegments = resetState.voiceTranscriptSegments;
-    this.voiceTranscriptPreview = resetState.voiceTranscriptPreview;
-    this.isRecording = resetState.isRecording;
-    this.isRecordingPaused = resetState.isRecordingPaused;
+    mediaController.teardownVoiceRecording(this.getMediaControllerHost());
   }
 
   private addVoiceAttachment(blob: Blob, transcript: string) {
-    const result = buildVoiceAttachment({
-      blob,
-      existingFiles: this.selectedFiles,
-      transcriptSegments: transcript ? [transcript] : [],
-      transcriptPreview: transcript,
-      createId: () =>
-        (typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : this.randomId(12)),
-      now: () => Date.now(),
-    });
-
-    const nextState = applyVoiceAttachmentResult(
-      {
-        selectedFiles: this.selectedFiles,
-        attachmentError: this.attachmentError,
-      },
-      result,
-    );
-    this.selectedFiles = nextState.selectedFiles;
-    this.attachmentError = nextState.attachmentError;
-    if ('voiceAttachmentId' in nextState) {
-      this.voiceAttachmentId = nextState.voiceAttachmentId;
-    }
-    if ('voiceTranscript' in nextState) {
-      this.voiceTranscript = nextState.voiceTranscript;
-    }
+    mediaController.addVoiceAttachment(this.getMediaControllerHost(), blob, transcript);
   }
 
   async handleVoiceButtonClick() {
-    if (this.isVoiceButtonDisabled) {
-      return;
-    }
-
-    const resetState = resetVoiceCaptureDraftState();
-    this.voiceTranscriptSegments = resetState.voiceTranscriptSegments;
-    this.voiceTranscriptPreview = resetState.voiceTranscriptPreview;
-    this.voiceTranscript = resetState.voiceTranscript;
-
-    const started = await this.voiceCapture.start({
-      onTranscriptPreview: (preview, segments) => {
-        this.voiceTranscriptPreview = preview;
-        this.voiceTranscriptSegments = segments;
-      },
-      onSpeechRecognitionAvailabilityChange: (available) => {
-        this.speechRecognitionAvailable = available;
-      },
-      onError: (message) => {
-        this.errorMessage = message;
-      },
-      isRecordingActive: () => this.isRecording,
-      isRecordingPaused: () => this.isRecordingPaused,
-    });
-
-    if (!started) {
-      return;
-    }
-
-    const nextState = createVoiceRecordingStartedState();
-    this.isRecording = nextState.isRecording;
-    this.isRecordingPaused = nextState.isRecordingPaused;
+    await mediaController.handleVoiceButtonClick(this.getMediaControllerHost());
   }
 
   private pauseVoiceRecording() {
-    if (!this.isRecording || this.isRecordingPaused) {
-      return;
-    }
-
-    this.voiceCapture.pause();
-    this.isRecordingPaused = createVoiceRecordingPausedState().isRecordingPaused;
+    mediaController.pauseVoiceRecording(this.getMediaControllerHost());
   }
 
   private resumeVoiceRecording() {
-    if (!this.isRecording || !this.isRecordingPaused) {
-      return;
-    }
-
-    this.voiceCapture.resume({
-      onTranscriptPreview: (preview, segments) => {
-        this.voiceTranscriptPreview = preview;
-        this.voiceTranscriptSegments = segments;
-      },
-      onSpeechRecognitionAvailabilityChange: (available) => {
-        this.speechRecognitionAvailable = available;
-      },
-      onError: (message) => {
-        this.errorMessage = message;
-      },
-      isRecordingActive: () => this.isRecording,
-      isRecordingPaused: () => this.isRecordingPaused,
-    });
-    this.isRecordingPaused = createVoiceRecordingResumedState().isRecordingPaused;
+    mediaController.resumeVoiceRecording(this.getMediaControllerHost());
   }
 
   async handleVoiceConfirmClick() {
-    if (!this.isRecording) {
-      return;
-    }
-
-    const nextState = createVoiceRecordingFinishedState();
-    this.isRecording = nextState.isRecording;
-    this.isRecordingPaused = nextState.isRecordingPaused;
-    this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
-    const result = await this.voiceCapture.stop();
-    if (result.blob) {
-      this.addVoiceAttachment(result.blob, result.transcript);
-    }
-    this.voiceTranscriptSegments = nextState.voiceTranscriptSegments;
-    this.voiceTranscriptPreview = nextState.voiceTranscriptPreview;
+    await mediaController.handleVoiceConfirmClick(this.getMediaControllerHost());
   }
 
   private async discardVoiceRecording() {
-    const nextState = createVoiceRecordingDiscardedState();
-    this.isRecording = nextState.isRecording;
-    this.isRecordingPaused = nextState.isRecordingPaused;
-    this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
-    await this.voiceCapture.discard();
-    this.voiceTranscript = nextState.voiceTranscript;
-    this.voiceTranscriptSegments = nextState.voiceTranscriptSegments;
-    this.voiceTranscriptPreview = nextState.voiceTranscriptPreview;
+    await mediaController.discardVoiceRecording(this.getMediaControllerHost());
   }
 
   handleVoiceDialogConfirm() {
@@ -1671,117 +1297,27 @@ export class RioAssistWidget extends LitElement {
       void this.discardVoiceRecording();
       return;
     }
-
-    const targetId = this.pendingVoiceRemovalId;
-    if (targetId) {
-      const nextState = confirmVoiceRemovalState({
-        selectedFiles: this.selectedFiles,
-        targetId,
-        voiceAttachmentId: this.voiceAttachmentId,
-      });
-      this.selectedFiles = nextState.selectedFiles;
-      this.voiceAttachmentId = nextState.voiceAttachmentId;
-      if (typeof nextState.voiceTranscript === 'string') {
-        this.voiceTranscript = nextState.voiceTranscript;
-      }
-      this.pendingVoiceRemovalId = nextState.pendingVoiceRemovalId;
-      this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
-      if (typeof nextState.attachmentError === 'string') {
-        this.attachmentError = nextState.attachmentError;
-      }
-      return;
-    }
-    this.voiceCancelDialogOpen = false;
+    mediaController.handleVoiceDialogConfirm(this.getMediaControllerHost());
   }
 
   handleVoiceDialogContinue() {
-    if (this.voiceCancelDialogMode === 'cancel') {
-      const nextState = closeVoiceDialogAndResume();
-      this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
-      this.pendingVoiceRemovalId = nextState.pendingVoiceRemovalId;
-      this.resumeVoiceRecording();
-      return;
-    }
-
-    const nextState = closeVoiceDialog();
-    this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
-    this.pendingVoiceRemovalId = nextState.pendingVoiceRemovalId;
+    mediaController.handleVoiceDialogContinue(this.getMediaControllerHost());
   }
 
   handleVoiceAttachmentRemove(id: string) {
-    if (this.isRecording) {
-      return;
-    }
-
-    const nextState = openVoiceRemovalDialog(id);
-    this.voiceCancelDialogMode = nextState.voiceCancelDialogMode;
-    this.pendingVoiceRemovalId = nextState.pendingVoiceRemovalId;
-    this.voiceCancelDialogOpen = nextState.voiceCancelDialogOpen;
+    mediaController.handleVoiceAttachmentRemove(this.getMediaControllerHost(), id);
   }
 
   handleFilePickerClick() {
-    if (this.isFilePickerDisabled) {
-      return;
-    }
-
-    const input = this.renderRoot.querySelector('.file-input') as HTMLInputElement | null;
-    if (input && !input.disabled) {
-      input.click();
-    }
+    mediaController.handleFilePickerClick(this.getMediaControllerHost());
   }
 
   handleFileInputChange(event: Event) {
-    const input = event.target as HTMLInputElement | null;
-    if (!input) {
-      return;
-    }
-
-    const previousFiles = this.selectedFiles;
-    const files = Array.from(input.files ?? []);
-    input.value = '';
-
-    if (files.length === 0) {
-      return;
-    }
-
-    const result = prepareFileSelection({
-      currentFiles: this.selectedFiles,
-      incomingFiles: files,
-      createId: () =>
-        (typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : this.randomId(12)),
-      createPreviewUrl: (file) => URL.createObjectURL(file),
-    });
-
-    this.selectedFiles = result.files;
-    this.attachmentError = result.error;
-
-    previousFiles.forEach((item) => {
-      if (item.previewUrl && !this.selectedFiles.find((entry) => entry.id === item.id)) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
-    });
+    mediaController.handleFileInputChange(this.getMediaControllerHost(), event);
   }
 
   handleAttachmentRemove(id: string) {
-    const removal = buildAttachmentRemoval({
-      currentFiles: this.selectedFiles,
-      id,
-    });
-    const removed = removal.removed;
-    if (removed?.kind === 'audio') {
-      this.handleVoiceAttachmentRemove(id);
-      return;
-    }
-    const nextState = finalizeAttachmentRemovalState(removal);
-    this.selectedFiles = nextState.selectedFiles;
-    if (removed?.previewUrl) {
-      URL.revokeObjectURL(removed.previewUrl);
-    }
-    if (typeof nextState.attachmentError === 'string') {
-      this.attachmentError = nextState.attachmentError;
-    }
+    mediaController.handleAttachmentRemove(this.getMediaControllerHost(), id);
   }
 
   private dispatchMessageAction(kind: string, message: ChatMessage) {
