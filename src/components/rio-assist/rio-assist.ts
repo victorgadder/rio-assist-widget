@@ -6,6 +6,10 @@ import {
   type RioIncomingMessage,
 } from '../../services/rioWebsocket';
 import { VoiceCaptureController } from '../../services/voiceCapture';
+import {
+  DEFAULT_LOADING_LABEL,
+  LoadingGuardController,
+} from '../../services/loadingGuard';
 import { createMarkdownRenderer } from '../../services/markdownRenderer';
 import {
   CONSULTANT_AGENT_INTRO,
@@ -33,6 +37,39 @@ import {
   resolveConversationActionErrorText,
   shouldIgnoreAssistantPayload,
 } from '../../application/conversation-action-flow';
+import {
+  beginConversationScrollbarDrag,
+  calculateConversationScrollbarState,
+  createHiddenConversationScrollbarState,
+  type ConversationScrollbarDragMetrics,
+  updateConversationScrollbarDrag,
+} from '../../application/conversation-scrollbar-flow';
+import {
+  closeConversationsPanelState,
+  closeNewConversationConfirmState,
+  closePanelState,
+  createNewConversationResetState,
+  enterFullscreenState,
+  exitFullscreenState,
+  handleCloseActionState,
+  openConversationsPanelState,
+  openNewConversationConfirmState,
+  toggleConversationsPanelState,
+  toggleFromFloatingButton,
+  togglePanelState,
+  type PanelVisibilityState,
+} from '../../application/panel-flow';
+import {
+  applyConversationDeletionState,
+  applyConversationRenameState,
+  createConversationHistoryState,
+  createMessageHistoryState,
+  createPendingDeleteAction,
+  createPendingRenameAction,
+  createRetryConversationAction,
+  restoreConversationSnapshotState,
+  selectConversationState,
+} from '../../application/conversation-state-flow';
 import {
   applyConsultantEffectsAfterAssistantMessage,
   createInitialConsultantFlowState,
@@ -67,8 +104,6 @@ import type {
   ConversationRenameTarget,
 } from '../../domain/conversation';
 import {
-  normalizeRole as normalizeHistoryRole,
-  parseTimestamp as parseHistoryTimestamp,
   repairConversationId as repairHistoryConversationId,
 } from './history-utils';
 import { logger } from '../../utils/logger';
@@ -250,11 +285,7 @@ export class RioAssistWidget extends LitElement {
 
   showNewConversationShortcut = false;
 
-  conversationScrollbar = {
-    height: 0,
-    top: 0,
-    visible: false,
-  };
+  conversationScrollbar = createHiddenConversationScrollbarState();
 
   conversationHistoryLoading = false;
 
@@ -270,10 +301,7 @@ export class RioAssistWidget extends LitElement {
 
   conversationActionError: ConversationActionErrorState | null = null;
 
-  private loadingLabelInternal = 'UptAIme Assist está respondendo...';
-  private loadingTimerSlow: number | null = null;
-  private loadingTimerLong: number | null = null;
-  private loadingTimerVeryLong: number | null = null;
+  private loadingLabelInternal = DEFAULT_LOADING_LABEL;
 
   private refreshConversationsAfterResponse = false;
 
@@ -322,6 +350,12 @@ export class RioAssistWidget extends LitElement {
   private pendingVoiceRemovalId: string | null = null;
   private voiceTranscriptSegments: string[] = [];
   private voiceTranscriptPreview = '';
+  private readonly loadingGuard = new LoadingGuardController({
+    onLabelChange: (label) => {
+      this.loadingLabelInternal = label;
+    },
+    onRequestUpdate: () => this.requestUpdate(),
+  });
   private readonly voiceCapture = new VoiceCaptureController(console);
 
   private repairConversationId(rawId: string): string {
@@ -373,10 +407,7 @@ export class RioAssistWidget extends LitElement {
   private conversationScrollbarDraggingId: number | null = null;
 
   private conversationScrollbarDragState: {
-    startY: number;
-    startThumbTop: number;
-    trackHeight: number;
-    thumbHeight: number;
+    metrics: ConversationScrollbarDragMetrics;
     list: HTMLElement;
   } | null = null;
 
@@ -508,7 +539,7 @@ export class RioAssistWidget extends LitElement {
     this.teardownVoiceRecording();
 
     this.teardownRioClient();
-    this.clearLoadingGuard();
+    this.loadingGuard.clear();
   }
 
   private getConsultantFlowState(): ConsultantFlowState {
@@ -611,10 +642,13 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const willOpenMiniPanel = !this.open && !this.isFullscreen;
-    this.togglePanel();
+    const nextState = toggleFromFloatingButton(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.emittedEvent) {
+      this.dispatchPanelToggleEvent(nextState.emittedEvent);
+    }
 
-    if (this.autoStartConsultantFlow && willOpenMiniPanel && !this.hasActiveConversation) {
+    if (this.autoStartConsultantFlow && nextState.willOpenMiniPanel && !this.hasActiveConversation) {
       this.handleConsultantAgentOpen();
     }
   }
@@ -679,45 +713,39 @@ export class RioAssistWidget extends LitElement {
   }
 
   togglePanel() {
-    if (this.isFullscreen) {
-      this.exitFullscreen(false);
-      return;
+    const nextState = togglePanelState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.emittedEvent) {
+      this.dispatchPanelToggleEvent(nextState.emittedEvent);
     }
-
-    this.open = !this.open;
-    this.dispatchEvent(
-      new CustomEvent(this.open ? 'rioassist:open' : 'rioassist:close', {
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 
   closePanel() {
-    this.isFullscreen = false;
-    if (this.open) {
-      this.togglePanel();
+    const nextState = closePanelState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.emittedEvent) {
+      this.dispatchPanelToggleEvent(nextState.emittedEvent);
     }
   }
 
   openConversationsPanel() {
-    this.showConversations = true;
-    this.requestConversationHistory();
+    const nextState = openConversationsPanelState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.shouldRequestHistory) {
+      this.requestConversationHistory();
+    }
   }
 
   closeConversationsPanel() {
-    this.showConversations = false;
-    this.conversationMenuId = null;
+    this.applyPanelVisibilityState(closeConversationsPanelState(this.getPanelVisibilityState()));
   }
 
   toggleConversationsPanel() {
-    this.showConversations = !this.showConversations;
-    if (!this.showConversations) {
-      this.conversationMenuId = null;
-      return;
+    const nextState = toggleConversationsPanelState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.shouldRequestHistory) {
+      this.requestConversationHistory();
     }
-
-    this.requestConversationHistory();
   }
 
   toggleNewConversationShortcut() {
@@ -807,11 +835,12 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
+    const selection = selectConversationState(conversationId, this.conversations);
     this.showConversations = false;
     this.conversationMenuId = null;
     this.errorMessage = '';
-    this.currentConversationId = conversationId;
-    this.activeConversationTitle = this.lookupConversationTitle(conversationId);
+    this.currentConversationId = selection.currentConversationId;
+    this.activeConversationTitle = selection.activeConversationTitle;
 
     console.info('[RioAssist][history] carregando conversa', conversationId);
     this.requestConversationHistory(conversationId);
@@ -906,23 +935,20 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    let changed = false;
-    this.conversations = this.conversations.map((conversation) => {
-      if (conversation.id === id) {
-        changed = true;
-        return { ...conversation, title: newTitle };
-      }
-      return conversation;
+    const result = applyConversationRenameState({
+      conversations: this.conversations,
+      currentConversationId: this.currentConversationId,
+      conversationId: id,
+      newTitle,
     });
 
-    if (!changed) {
+    if (!result.changed) {
       return;
     }
 
-    if (this.currentConversationId === id) {
-      this.activeConversationTitle = newTitle;
-      this.syncActiveConversationMeta();
-    }
+    this.conversations = result.conversations;
+    this.activeConversationTitle = result.activeConversationTitle;
+    this.activeConversationUpdatedAt = result.activeConversationUpdatedAt;
   }
 
   applyConversationDeletion(id: string) {
@@ -930,37 +956,30 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const wasActive = this.currentConversationId === id;
-    const next = this.conversations.filter((conversation) => conversation.id !== id);
+    const result = applyConversationDeletionState({
+      conversations: this.conversations,
+      currentConversationId: this.currentConversationId,
+      conversationId: id,
+      messages: this.messages,
+    });
 
-    if (next.length === this.conversations.length) {
+    if (!result.removed) {
       return;
     }
 
-    this.conversations = next;
-
-    if (wasActive) {
-      this.currentConversationId = null;
-      this.activeConversationTitle = null;
-      this.activeConversationUpdatedAt = null;
-      this.messages = [];
-    }
+    this.conversations = result.conversations;
+    this.currentConversationId = result.currentConversationId;
+    this.activeConversationTitle = result.activeConversationTitle;
+    this.activeConversationUpdatedAt = result.activeConversationUpdatedAt;
+    this.messages = result.messages;
   }
 
   private restoreConversationSnapshot(snapshot: ConversationItem | undefined, index: number) {
-    if (!snapshot) {
-      return;
-    }
-
-    const exists = this.conversations.some((conversation) => conversation.id === snapshot.id);
-    if (exists) {
-      return;
-    }
-
-    const next = [...this.conversations];
-    const position = index >= 0 && index <= next.length ? index : next.length;
-    next.splice(position, 0, snapshot);
-    this.conversations = next;
+    this.conversations = restoreConversationSnapshotState({
+      conversations: this.conversations,
+      snapshot,
+      index,
+    });
   }
 
   async confirmDeleteConversation() {
@@ -969,23 +988,13 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const snapshot =
-      this.conversations[target.index] ??
-      this.conversations.find((item) => item.id === target.id) ?? {
-        id: target.id,
-        title: target.title,
-        updatedAt: new Date().toISOString(),
-      };
-    const isActive = this.currentConversationId === target.id;
-    this.pendingConversationAction = {
-      action: 'delete',
-      conversationId: target.id,
-      originalTitle: target.title,
-      index: target.index,
-      snapshot,
-      messagesSnapshot: isActive ? [...this.messages] : undefined,
-      wasActive: isActive,
-    };
+    this.pendingConversationAction = createPendingDeleteAction({
+      target,
+      conversations: this.conversations,
+      currentConversationId: this.currentConversationId,
+      messages: this.messages,
+      nowIsoString: new Date().toISOString(),
+    });
 
     const success = await this.dispatchConversationAction(
       'delete',
@@ -1026,13 +1035,10 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    this.pendingConversationAction = {
-      action: 'rename',
-      conversationId: target.id,
-      originalTitle: target.title,
-      index: target.index,
-      newTitle,
-    };
+    this.pendingConversationAction = createPendingRenameAction({
+      ...target,
+      draft: newTitle,
+    });
 
     const success = await this.dispatchConversationAction(
       'rename',
@@ -1063,42 +1069,18 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const indexFromState =
-      typeof errorState.index === 'number' ? errorState.index : this.conversations.findIndex(
-        (item) => item.id === errorState.conversationId,
-      );
-    const safeIndex =
-      indexFromState >= 0
-        ? indexFromState
-        : this.conversations.length > 0
-          ? this.conversations.length - 1
-          : 0;
-
-    const snapshot =
-      errorState.snapshot ??
-      this.conversations.find((item) => item.id === errorState.conversationId) ?? {
-        id: errorState.conversationId,
-        title: errorState.originalTitle,
-        updatedAt: new Date().toISOString(),
-      };
-
-    this.pendingConversationAction = {
-      action: errorState.action,
-      conversationId: errorState.conversationId,
-      originalTitle: errorState.originalTitle,
-      index: safeIndex,
-      newTitle: errorState.newTitle,
-      snapshot,
-      messagesSnapshot: errorState.messagesSnapshot,
-      wasActive: errorState.wasActive,
-    };
+    this.pendingConversationAction = createRetryConversationAction({
+      errorState,
+      conversations: this.conversations,
+      nowIsoString: new Date().toISOString(),
+    });
 
     this.conversationActionError = null;
 
     await this.dispatchConversationAction(
       errorState.action,
       { id: errorState.conversationId, title: errorState.newTitle ?? errorState.originalTitle },
-      safeIndex,
+      this.pendingConversationAction.index,
       errorState.newTitle,
     );
   }
@@ -1255,13 +1237,13 @@ export class RioAssistWidget extends LitElement {
         message: errorText,
       };
       this.pendingConversationAction = null;
-      this.clearLoadingGuard();
+      this.loadingGuard.clear();
       this.isLoading = false;
       return true;
     }
 
     this.errorMessage = errorText;
-    this.clearLoadingGuard();
+    this.loadingGuard.clear();
     this.isLoading = false;
     return true;
   }
@@ -1293,40 +1275,25 @@ export class RioAssistWidget extends LitElement {
   }
 
   handleCloseAction() {
-    if (this.isFullscreen) {
-      this.exitFullscreen(true);
-      return;
-    }
-
-    if (this.showConversations) {
-      this.closeConversationsPanel();
-    } else {
-      this.closePanel();
+    const result = handleCloseActionState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(result.nextState);
+    if (result.nextState.emittedEvent) {
+      this.dispatchPanelToggleEvent(result.nextState.emittedEvent);
     }
   }
 
   enterFullscreen() {
-    if (this.isFullscreen) {
-      return;
+    const nextState = enterFullscreenState(this.getPanelVisibilityState());
+    this.applyPanelVisibilityState(nextState);
+    if (nextState.shouldRequestHistory) {
+      this.requestConversationHistory();
     }
-
-    this.isFullscreen = true;
-    this.open = false;
-    this.showConversations = false;
-    this.requestConversationHistory();
   }
 
   exitFullscreen(restorePanel: boolean) {
-    if (!this.isFullscreen) {
-      return;
-    }
-
-    this.isFullscreen = false;
-    this.conversationMenuId = null;
-    this.showNewConversationShortcut = false;
-    if (restorePanel) {
-      this.open = true;
-    }
+    this.applyPanelVisibilityState(
+      exitFullscreenState(this.getPanelVisibilityState(), restorePanel),
+    );
   }
 
   handleCreateConversation() {
@@ -1340,22 +1307,30 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    this.newConversationConfirmOpen = true;
+    this.applyPanelVisibilityState(
+      openNewConversationConfirmState(this.getPanelVisibilityState()),
+    );
   }
 
   confirmCreateConversation() {
     if (!this.hasActiveConversation) {
-      this.newConversationConfirmOpen = false;
+      this.applyPanelVisibilityState(
+        closeNewConversationConfirmState(this.getPanelVisibilityState()),
+      );
       return;
     }
 
-    this.newConversationConfirmOpen = false;
+    this.applyPanelVisibilityState(
+      closeNewConversationConfirmState(this.getPanelVisibilityState()),
+    );
 
     this.startNewConversation();
   }
 
   cancelCreateConversation() {
-    this.newConversationConfirmOpen = false;
+    this.applyPanelVisibilityState(
+      closeNewConversationConfirmState(this.getPanelVisibilityState()),
+    );
   }
 
   private startNewConversation() {
@@ -1363,17 +1338,18 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    this.clearLoadingGuard();
-    this.isLoading = false;
-    this.messages = [];
-    this.message = '';
-    this.errorMessage = '';
-    this.showConversations = false;
+    this.loadingGuard.clear();
+    const resetState = createNewConversationResetState();
+    this.isLoading = resetState.isLoading;
+    this.messages = resetState.messages;
+    this.message = resetState.message;
+    this.errorMessage = resetState.errorMessage;
+    this.showConversations = resetState.showConversations;
     this.teardownRioClient();
-    this.currentConversationId = null;
-    this.activeConversationTitle = null;
-    this.activeConversationUpdatedAt = null;
-    this.showNewConversationShortcut = false;
+    this.currentConversationId = resetState.currentConversationId;
+    this.activeConversationTitle = resetState.activeConversationTitle;
+    this.activeConversationUpdatedAt = resetState.activeConversationUpdatedAt;
+    this.showNewConversationShortcut = resetState.showNewConversationShortcut;
     this.applyConsultantFlowState(createInitialConsultantFlowState());
     this.dispatchEvent(
       new CustomEvent('rioassist:new-conversation', {
@@ -1388,7 +1364,7 @@ export class RioAssistWidget extends LitElement {
     if (!target) {
       return;
     }
-    this.updateConversationScrollbar(target);
+    this.syncConversationScrollbar(target);
   }
 
   handleConversationScrollbarPointerDown(event: PointerEvent) {
@@ -1402,29 +1378,25 @@ export class RioAssistWidget extends LitElement {
     }
 
     const trackRect = track.getBoundingClientRect();
-    const thumbHeight = trackRect.height * (this.conversationScrollbar.height / 100);
-    const maxThumbTop = Math.max(trackRect.height - thumbHeight, 0);
-    const scrollRange = Math.max(list.scrollHeight - list.clientHeight, 1);
-    const currentThumbTop = (list.scrollTop / scrollRange) * maxThumbTop;
-    const offsetY = event.clientY - trackRect.top;
-    const isOnThumb = offsetY >= currentThumbTop && offsetY <= currentThumbTop + thumbHeight;
+    const dragStart = beginConversationScrollbarDrag({
+      pointerY: event.clientY,
+      trackTop: trackRect.top,
+      trackHeight: trackRect.height,
+      scrollbarHeightPercent: this.conversationScrollbar.height,
+      scrollHeight: list.scrollHeight,
+      clientHeight: list.clientHeight,
+      scrollTop: list.scrollTop,
+    });
 
-    const nextThumbTop = isOnThumb
-      ? currentThumbTop
-      : Math.min(Math.max(offsetY - thumbHeight / 2, 0), maxThumbTop);
-
-    if (!isOnThumb) {
-      list.scrollTop = (nextThumbTop / Math.max(maxThumbTop, 1)) * (list.scrollHeight - list.clientHeight);
-      this.updateConversationScrollbar(list);
+    if (dragStart.nextScrollTop !== null) {
+      list.scrollTop = dragStart.nextScrollTop;
+      this.syncConversationScrollbar(list);
     }
 
     track.setPointerCapture(event.pointerId);
     this.conversationScrollbarDraggingId = event.pointerId;
     this.conversationScrollbarDragState = {
-      startY: event.clientY,
-      startThumbTop: nextThumbTop,
-      trackHeight: trackRect.height,
-      thumbHeight,
+      metrics: dragStart.metrics,
       list,
     };
     event.preventDefault();
@@ -1439,22 +1411,17 @@ export class RioAssistWidget extends LitElement {
       return;
     }
 
-    const {
-      startY,
-      startThumbTop,
-      trackHeight,
-      thumbHeight,
-      list,
-    } = this.conversationScrollbarDragState;
+    const { metrics, list } = this.conversationScrollbarDragState;
+    const nextScrollTop = updateConversationScrollbarDrag({
+      metrics,
+      pointerY: event.clientY,
+      scrollHeight: list.scrollHeight,
+      clientHeight: list.clientHeight,
+    });
 
-    const maxThumbTop = Math.max(trackHeight - thumbHeight, 0);
-    const deltaY = event.clientY - startY;
-    const thumbTop = Math.min(Math.max(startThumbTop + deltaY, 0), maxThumbTop);
-    const scrollRange = list.scrollHeight - list.clientHeight;
-
-    if (scrollRange > 0) {
-      list.scrollTop = (thumbTop / Math.max(maxThumbTop, 1)) * scrollRange;
-      this.updateConversationScrollbar(list);
+    if (nextScrollTop !== null) {
+      list.scrollTop = nextScrollTop;
+      this.syncConversationScrollbar(list);
     }
 
     event.preventDefault();
@@ -1479,11 +1446,11 @@ export class RioAssistWidget extends LitElement {
 
     this.conversationScrollbarRaf = requestAnimationFrame(() => {
       this.conversationScrollbarRaf = null;
-      this.updateConversationScrollbar();
+      this.syncConversationScrollbar();
     });
   }
 
-  private updateConversationScrollbar(target?: HTMLElement | null) {
+  private syncConversationScrollbar(target?: HTMLElement | null) {
     const element =
       target ??
       (this.renderRoot.querySelector(
@@ -1492,30 +1459,57 @@ export class RioAssistWidget extends LitElement {
 
     if (!element) {
       if (this.conversationScrollbar.visible) {
-        this.conversationScrollbar = { height: 0, top: 0, visible: false };
+        this.conversationScrollbar = createHiddenConversationScrollbarState();
       }
       return;
     }
 
-    const { scrollHeight, clientHeight, scrollTop } = element;
-    if (scrollHeight <= clientHeight + 1) {
-      if (this.conversationScrollbar.visible) {
-        this.conversationScrollbar = { height: 0, top: 0, visible: false };
-      }
-      return;
-    }
+    this.conversationScrollbar = calculateConversationScrollbarState({
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      scrollTop: element.scrollTop,
+    });
+  }
 
-    const ratio = clientHeight / scrollHeight;
-    const height = Math.max(ratio * 100, 8);
-    const maxTop = 100 - height;
-    const top =
-      scrollTop / (scrollHeight - clientHeight) * (maxTop > 0 ? maxTop : 0);
-
-    this.conversationScrollbar = {
-      height,
-      top,
-      visible: true,
+  private getPanelVisibilityState(): PanelVisibilityState {
+    return {
+      open: this.open,
+      isFullscreen: this.isFullscreen,
+      showConversations: this.showConversations,
+      conversationMenuId: this.conversationMenuId,
+      showNewConversationShortcut: this.showNewConversationShortcut,
+      newConversationConfirmOpen: this.newConversationConfirmOpen,
     };
+  }
+
+  private applyPanelVisibilityState(state: Partial<PanelVisibilityState>) {
+    if (typeof state.open === 'boolean') {
+      this.open = state.open;
+    }
+    if (typeof state.isFullscreen === 'boolean') {
+      this.isFullscreen = state.isFullscreen;
+    }
+    if (typeof state.showConversations === 'boolean') {
+      this.showConversations = state.showConversations;
+    }
+    if ('conversationMenuId' in state) {
+      this.conversationMenuId = state.conversationMenuId ?? null;
+    }
+    if (typeof state.showNewConversationShortcut === 'boolean') {
+      this.showNewConversationShortcut = state.showNewConversationShortcut;
+    }
+    if (typeof state.newConversationConfirmOpen === 'boolean') {
+      this.newConversationConfirmOpen = state.newConversationConfirmOpen;
+    }
+  }
+
+  private dispatchPanelToggleEvent(eventName: 'rioassist:open' | 'rioassist:close') {
+    this.dispatchEvent(
+      new CustomEvent(eventName, {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   async onSuggestionClick(suggestion: string) {
@@ -1967,7 +1961,7 @@ export class RioAssistWidget extends LitElement {
     this.message = '';
     this.errorMessage = '';
     this.isLoading = true;
-    this.startLoadingGuard();
+    this.loadingGuard.start();
 
     try {
       const client = this.ensureRioClient();
@@ -1991,7 +1985,7 @@ export class RioAssistWidget extends LitElement {
       }
     } catch (error) {
       this.pendingResponseTo = null;
-      this.clearLoadingGuard();
+      this.loadingGuard.clear();
       this.isLoading = false;
       this.errorMessage = error instanceof Error
         ? error.message
@@ -2066,7 +2060,12 @@ export class RioAssistWidget extends LitElement {
         await this.requestConversationHistory();
       }
       this.currentConversationId = incomingConversationId;
-      this.syncActiveConversationMeta();
+      const state = createConversationHistoryState({
+        conversations: this.conversations,
+        currentConversationId: this.currentConversationId,
+      });
+      this.activeConversationTitle = state.activeConversationTitle;
+      this.activeConversationUpdatedAt = state.activeConversationUpdatedAt;
     }
 
     console.info('[RioAssist][ws] resposta de mensagem recebida', {
@@ -2090,7 +2089,7 @@ export class RioAssistWidget extends LitElement {
     });
     this.messages = [...this.messages, assistantMessage];
     this.pendingResponseTo = null;
-    this.clearLoadingGuard();
+    this.loadingGuard.clear();
     this.isLoading = false;
 
     const consultantEffects = applyConsultantEffectsAfterAssistantMessage({
@@ -2188,9 +2187,15 @@ export class RioAssistWidget extends LitElement {
   private applyConversationHistoryFromEntries(entries: unknown[]) {
     if (entries.length === 0) {
       console.info('[RioAssist][history] payload sem itens para montar lista de conversas');
-      this.conversations = [];
-      this.conversationHistoryLoading = false;
-      this.conversationHistoryError = '';
+      const state = createConversationHistoryState({
+        conversations: [],
+        currentConversationId: this.currentConversationId,
+      });
+      this.conversations = state.conversations;
+      this.conversationHistoryLoading = state.conversationHistoryLoading;
+      this.conversationHistoryError = state.conversationHistoryError;
+      this.activeConversationTitle = state.activeConversationTitle;
+      this.activeConversationUpdatedAt = state.activeConversationUpdatedAt;
       return;
     }
 
@@ -2218,247 +2223,58 @@ export class RioAssistWidget extends LitElement {
       entries,
       (rawId) => this.repairConversationId(rawId),
     );
-
-    this.conversations = conversations;
-    this.conversationHistoryLoading = false;
-    this.conversationHistoryError = '';
-    this.syncActiveConversationMeta();
+    const state = createConversationHistoryState({
+      conversations,
+      currentConversationId: this.currentConversationId,
+    });
+    this.conversations = state.conversations;
+    this.conversationHistoryLoading = state.conversationHistoryLoading;
+    this.conversationHistoryError = state.conversationHistoryError;
+    this.activeConversationTitle = state.activeConversationTitle;
+    this.activeConversationUpdatedAt = state.activeConversationUpdatedAt;
     console.info('[RioAssist][history] conversas normalizadas', conversations);
   }
 
   private applyMessageHistory(entries: unknown[], conversationId?: string | null) {
     if (entries.length === 0) {
       console.info('[RioAssist][history] lista de mensagens vazia', { conversationId });
-      this.messages = [];
-      this.showConversations = false;
-      this.clearLoadingGuard();
-      this.isLoading = false;
-      this.conversationHistoryLoading = false;
+      const state = createMessageHistoryState({
+        messages: [],
+        currentConversationId: conversationId,
+      });
+      this.messages = state.messages;
+      this.showConversations = state.showConversations;
+      this.loadingGuard.clear();
+      this.isLoading = state.isLoading;
+      this.conversationHistoryLoading = state.conversationHistoryLoading;
+      this.showNewConversationShortcut = state.showNewConversationShortcut;
+      this.refreshConversationsAfterResponse = state.refreshConversationsAfterResponse;
+      if (typeof state.currentConversationId === 'string') {
+        this.currentConversationId = state.currentConversationId;
+      }
       return;
     }
 
     const normalized = normalizeMessageHistory(entries, (content) => this.renderMarkdown(content));
-
-    if (conversationId) {
-      this.currentConversationId = conversationId;
+    const state = createMessageHistoryState({
+      messages: normalized,
+      currentConversationId: conversationId,
+    });
+    this.messages = state.messages;
+    this.showConversations = state.showConversations;
+    this.loadingGuard.clear();
+    this.isLoading = state.isLoading;
+    this.showNewConversationShortcut = state.showNewConversationShortcut;
+    this.conversationHistoryLoading = state.conversationHistoryLoading;
+    this.refreshConversationsAfterResponse = state.refreshConversationsAfterResponse;
+    if (typeof state.currentConversationId === 'string') {
+      this.currentConversationId = state.currentConversationId;
     }
-
-    this.messages = normalized;
-    this.showConversations = false;
-    this.clearLoadingGuard();
-    this.isLoading = false;
-    this.showNewConversationShortcut = normalized.length > 0;
-    this.conversationHistoryLoading = false;
-    this.refreshConversationsAfterResponse = false;
 
     console.info('[RioAssist][history] mensagens carregadas', {
       conversationId: conversationId ?? null,
       total: normalized.length,
     });
-  }
-
-  private normalizeHistoryMessages(
-    value: Record<string, unknown>,
-    index: number,
-  ): ChatMessage[] {
-    const messages: ChatMessage[] = [];
-
-    const rawUserText = value.message ?? value.question ?? value.query ?? value.text ?? value.content;
-    const userText = typeof rawUserText === 'string' ? rawUserText.trim() : '';
-
-    const rawResponseText =
-      value.response ?? value.answer ?? value.reply ?? value.completion ?? value.body ?? value.preview;
-    const responseText = typeof rawResponseText === 'string' ? rawResponseText.trim() : '';
-
-    const rawId = value.id ?? value.messageId ?? value.uuid ?? value.conversationMessageId;
-    const baseId = rawId !== undefined && rawId !== null
-      ? String(rawId)
-      : `history-${index + 1}`;
-
-    const userTimestampValue =
-      value.timestamp ??
-      value.createdAt ??
-      value.created_at ??
-      value.date ??
-      value.time;
-    const assistantTimestampValue =
-      value.responseTimestamp ??
-      value.responseTime ??
-      value.responseDate ??
-      value.response_at ??
-      value.updatedAt ??
-      value.updated_at;
-
-    const userTimestamp = this.parseTimestamp(userTimestampValue);
-    const assistantTimestamp = this.parseTimestamp(
-      assistantTimestampValue,
-      userTimestamp + 1,
-    );
-
-    if (responseText) {
-      if (userText) {
-        messages.push({
-          id: `${baseId}-user`,
-          role: 'user',
-          text: userText,
-          html: this.renderMarkdown(userText),
-          timestamp: userTimestamp,
-        });
-      }
-
-      messages.push({
-        id: `${baseId}-assistant`,
-        role: 'assistant',
-        text: responseText,
-        html: this.renderMarkdown(responseText),
-        timestamp: assistantTimestamp,
-      });
-    } else if (userText) {
-      // Se não tiver resposta, não exibimos a mensagem do usuário isolada.
-      return [];
-    }
-
-    if (messages.length > 0) {
-      return messages;
-    }
-
-    const fallback = this.normalizeSingleHistoryMessage(value, index);
-    return fallback ? [fallback] : [];
-  }
-
-  private normalizeSingleHistoryMessage(
-    value: Record<string, unknown>,
-    index: number,
-  ): ChatMessage | null {
-    const rawText =
-      value.text ??
-      value.message ??
-      value.content ??
-      value.response ??
-      value.body ??
-      value.preview;
-
-    const text = typeof rawText === 'string' && rawText.trim().length > 0
-      ? rawText
-      : '';
-
-    if (!text) {
-      return null;
-    }
-
-    const role = this.normalizeRole(
-      value.role ??
-        value.sender ??
-        value.from ??
-        value.author ??
-        value.type ??
-        value.direction,
-    );
-
-    const rawId = value.id ?? value.messageId ?? value.uuid ?? value.conversationMessageId;
-    const id = rawId !== undefined && rawId !== null
-      ? String(rawId)
-      : `history-message-${index + 1}`;
-
-    const timestampValue =
-      value.timestamp ??
-      value.createdAt ??
-      value.created_at ??
-      value.updatedAt ??
-      value.updated_at ??
-      value.date ??
-      value.time;
-
-    const timestamp = this.parseTimestamp(timestampValue);
-
-    return {
-      id,
-      role,
-      text,
-      html: this.renderMarkdown(text),
-      timestamp,
-    };
-  }
-
-  private normalizeRole(value: unknown): ChatRole {
-    return normalizeHistoryRole(value);
-  }
-
-  private parseTimestamp(value: unknown, fallback?: number) {
-    return parseHistoryTimestamp(value, fallback);
-  }
-
-  private lookupConversationTitle(conversationId: string | null) {
-    if (!conversationId) {
-      return null;
-    }
-
-    const found = this.conversations.find((item) => item.id === conversationId);
-    return found ? found.title : null;
-  }
-
-  private lookupConversationUpdatedAt(conversationId: string | null) {
-    if (!conversationId) {
-      return null;
-    }
-
-    const found = this.conversations.find((item) => item.id === conversationId);
-    return found ? found.updatedAt : null;
-  }
-
-  private syncActiveConversationMeta() {
-    if (!this.currentConversationId) {
-      return;
-    }
-
-    const title = this.lookupConversationTitle(this.currentConversationId);
-    const updatedAt = this.lookupConversationUpdatedAt(this.currentConversationId);
-    if (title) {
-      this.activeConversationTitle = title;
-    }
-    this.activeConversationUpdatedAt = updatedAt;
-  }
-
-  private startLoadingGuard() {
-    this.clearLoadingGuard();
-    this.loadingLabelInternal = 'UptAIme Assist está respondendo';
-
-    // Após 20s, mensagem de processamento prolongado.
-    this.loadingTimerSlow = window.setTimeout(() => {
-      this.loadingLabelInternal = 'UptAIme Assist continua respondendo';
-      this.requestUpdate();
-    }, 20000);
-
-    // Após 60s, aviso de demora maior.
-    this.loadingTimerLong = window.setTimeout(() => {
-      this.loadingLabelInternal =
-        'UptAIme Assist ainda está processando sua resposta. Peço que aguarde um pouco mais';
-      this.requestUpdate();
-    }, 60000);
-
-    // Após 120s, novo aviso de demora maior.
-    this.loadingTimerVeryLong = window.setTimeout(() => {
-      this.loadingLabelInternal =
-        'Essa solicitação está demorando um pouco mais que o esperado. Pode favor, aguarde mais um pouco';
-      this.requestUpdate();
-    }, 120000);
-  }
-
-  private clearLoadingGuard() {
-    if (this.loadingTimerSlow !== null) {
-      window.clearTimeout(this.loadingTimerSlow);
-      this.loadingTimerSlow = null;
-    }
-
-    if (this.loadingTimerLong !== null) {
-      window.clearTimeout(this.loadingTimerLong);
-      this.loadingTimerLong = null;
-    }
-
-    if (this.loadingTimerVeryLong !== null) {
-      window.clearTimeout(this.loadingTimerVeryLong);
-      this.loadingTimerVeryLong = null;
-    }
   }
 
   private scrollConversationToBottom() {
