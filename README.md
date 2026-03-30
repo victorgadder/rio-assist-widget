@@ -1,122 +1,124 @@
 # UptAIme Assist Widget
 
-Widget lateral do UptAIme Assist embalado como Web Component. Ao receber o token de login do RIO ele abre um websocket direto para `wss://ws.volkswagen.latam-sandbox.rio.cloud?token={TOKEN}` e envia o payload
+Web Component do UptAIme Assist preparado para embutir um chat lateral em aplicações web. O widget usa `Lit`, conversa com o backend principal via WebSocket e suporta fluxo guiado do consultor, histórico de conversas, anexos e gravação de voz.
 
-```json
-{
-  "action": "sendMessage",
-  "message": "<mensagem do usuario>"
-}
+## Instalação
+
+```bash
+npm install rio-assist-widget
 ```
 
-## Scripts
-- `npm run dev` - inicia Vite para desenvolvimento.
-- `npm run build` - gera `dist/rio-assist.js` pronto para CDN ou npm.
-- `npm run preview` - serve o bundle de producao localmente.
+## Uso rápido
 
-## Uso rapido no navegador
-```html
-<script src="https://cdn.exemplo.com/rio-assist.js"></script>
-<script>
-  window.RioAssist.init({
-    rioToken: '<TOKEN_RIO>',
-    title: 'UptAIme Assist',
-    buttonLabel: 'UptAIme Assist',
-    suggestions: [
-      'Resumo da Frota',
-      'Frota Disponível',
-      'Chamados Abertos',
-      'Parados + Causas',
-      'Aguardando Peças',
-      'Principais Gargalos',
-      'Tempo por Concessionária',
-      'Tempo de Ciclo',
-      'Preventiva x Corretiva',
-    ],
-  });
-</script>
+### Inicialização por script
+
+```ts
+import 'rio-assist-widget/dist/rio-assist.js';
+
+window.RioAssist?.init({
+  rioToken: '<TOKEN_RIO>',
+  title: 'UptAIme Assist',
+  suggestions: [
+    'Resumo da Frota',
+    'Frota Disponível',
+    'Chamados Abertos',
+    'Parados + Causas',
+    'Aguardando Peças',
+  ],
+});
 ```
 
-O metodo `init` adiciona o elemento `<rio-assist-widget>` ao final do `body`. Todos os parametros sao opcionais, mas `rioToken` precisa ser preenchido para conectar ao websocket.
+O método `init` injeta o elemento `<rio-assist-widget>` no final do `body`. Todos os parâmetros são opcionais, mas `rioToken` é necessário para abrir a sessão WebSocket do assistente.
 
-## Parametrizacoes por projeto
-Se nenhum parametro abaixo for informado, o widget mantem o comportamento e os visuais atuais como padrao.
-
-- `floatingButtonIconUrl`: icone principal do botao flutuante.
-- `floatingButtonLabelIconUrl`: imagem/label do botao flutuante.
-- `floatingButtonBackgroundIconUrl`: imagem de fundo do botao flutuante.
-- `wsBaseUrl`: URL base do websocket (padrao: `wss://ws.volkswagen.latam-sandbox.rio.cloud`).
-- `consultantApiBaseUrl`: URL base da API do consultor (padrao: `https://consultant-api.latam-sandbox.rio.cloud/consultant/api/v1`).
-- `title`: titulo exibido no mini painel e no modo tela cheia.
-- `consultantAgentButtonText`: texto do botao "Consulte o UptAIme Agent".
-- `showConsultantAgentButton`: controla se o botao "Consulte o UptAIme Agent" sera exibido (`true` ou `false`).
-- `consultantAgentInitialMessage`: primeira mensagem enviada ao iniciar o fluxo do agente.
-- `autoStartConsultantFlow`: quando `true`, ao abrir pelo botao flutuante o mini painel ja inicia o fluxo do agente consultor. Nesse modo, o botao de `+` reinicia esse mesmo fluxo, sem abrir a confirmacao de "nova conversa".
-
-Exemplo:
-
-```html
-<script>
-  window.RioAssist.init({
-    rioToken: '<TOKEN_RIO>',
-    title: 'Meu Assistente',
-    floatingButtonIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/icon.png',
-    floatingButtonLabelIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/label.png',
-    floatingButtonBackgroundIconUrl: 'https://cdn.exemplo.com/icones/projeto-a/bg.png',
-    wsBaseUrl: 'wss://ws.projeto-a.exemplo.com',
-    consultantApiBaseUrl: 'https://consultor.projeto-a.exemplo.com/consultant/api/v1',
-    consultantAgentButtonText: 'Falar com especialista',
-    showConsultantAgentButton: true,
-    consultantAgentInitialMessage:
-      'Sou o agente especialista deste projeto. Vou iniciar com um resumo da sua operacao.',
-    autoStartConsultantFlow: true,
-  });
-</script>
-```
-
-Tambem e possivel configurar via atributos `data-*` no elemento:
+### Instanciação manual
 
 ```html
 <rio-assist-widget
   data-title="Meu Assistente"
-  data-consultant-agent-button-text="Falar com especialista"
-  data-show-consultant-agent-button="true"
-  data-consultant-agent-initial-message="Sou o agente especialista deste projeto. Vou iniciar com um resumo da sua operacao."
-  data-floating-button-icon-url="https://cdn.exemplo.com/icones/projeto-a/icon.png"
-  data-floating-button-label-icon-url="https://cdn.exemplo.com/icones/projeto-a/label.png"
-  data-floating-button-background-icon-url="https://cdn.exemplo.com/icones/projeto-a/bg.png"
+  data-rio-token="<TOKEN_RIO>"
   data-ws-base-url="wss://ws.projeto-a.exemplo.com"
   data-consultant-api-base-url="https://consultor.projeto-a.exemplo.com/consultant/api/v1"
-  data-auto-start-consultant-flow="true"
 ></rio-assist-widget>
 ```
 
-## Integracao com apps (React/Angular/Vanilla)
-1. Instale:
-   ```bash
-   npm install rio-assist-widget
-   ```
-2. Importe o bundle no bootstrap (ex.: `main.tsx`):
-   ```ts
-   import 'rio-assist-widget/dist/rio-assist.js';
+## Principais parâmetros
 
-   window.RioAssist?.init({
-     rioToken: '<TOKEN_RIO>',
-     accentColor: '#008B9A',
-   });
-   ```
-3. Se preferir instanciar manualmente, coloque `<rio-assist-widget></rio-assist-widget>` no HTML e defina os atributos `data-*` (`data-title`, `data-button-label`, `data-rio-token` etc.).
+- `rioToken`: token de autenticação do RIO.
+- `title`: título exibido no widget.
+- `buttonLabel`: label do botão principal.
+- `accentColor`: cor de destaque do widget.
+- `suggestions`: sugestões iniciais de perguntas.
+- `wsBaseUrl`: URL base do WebSocket.
+- `consultantApiBaseUrl`: URL base da API do consultor.
+- `floatingButtonIconUrl`: ícone principal do botão flutuante.
+- `floatingButtonLabelIconUrl`: imagem/label do botão flutuante.
+- `floatingButtonBackgroundIconUrl`: imagem de fundo do botão flutuante.
+- `consultantAgentButtonText`: texto do botão do consultor.
+- `showConsultantAgentButton`: exibe ou oculta o botão do consultor.
+- `consultantAgentInitialMessage`: mensagem inicial do fluxo do consultor.
+- `autoStartConsultantFlow`: inicia automaticamente o fluxo do consultor ao abrir o widget.
 
-## Eventos disponibilizados
-- `rioassist:open` / `rioassist:close` - disparados ao abrir/fechar o painel.
-- `rioassist:send` - disparado quando o usuario envia uma mensagem. O `detail` contem `{ message, apiBaseUrl, hasToken, tokenPreview }`.
+## Eventos emitidos
 
-Escute esses eventos caso queira registrar logs ou interceptar mensagens antes/depois de irem para o websocket.
+O widget continua emitindo eventos `rioassist:*` para integração com a aplicação hospedeira:
 
-## Horario das mensagens
-O historico exibe o horario real das mensagens recebidas do backend. Para datas anteriores, usamos um formato relativo:
-- Hoje: apenas a hora.
-- Ontem: "ontem" + hora.
-- Entre 2 e 5 dias: dia da semana + hora.
-- Mais antigo: data completa + hora.
+- `rioassist:open`
+- `rioassist:close`
+- `rioassist:send`
+- `rioassist:new-conversation`
+- `rioassist:home`
+- `rioassist:header-action`
+- `rioassist:conversation-rename`
+- `rioassist:conversation-delete`
+- `rioassist:message-copy`
+- `rioassist:message-update`
+- `rioassist:message-like`
+- `rioassist:message-unlike`
+- `rioassist:message-share`
+- `rioassist:message-more`
 
+## Scripts
+
+- `npm run dev`: inicia o ambiente local com Vite.
+- `npm run build`: gera os bundles em `dist/`.
+- `npm run preview`: sobe uma prévia local do build.
+- `npm run typecheck`: valida o TypeScript sem emitir artefatos.
+- `npm test`: executa a suíte automatizada com Vitest.
+
+## Arquitetura resumida
+
+A base foi reorganizada para reduzir o acoplamento do componente principal:
+
+- `src/domain/`: tipos centrais do negócio.
+- `src/application/`: fluxos, casos de uso e contratos.
+- `src/services/`: adapters e integrações técnicas.
+- `src/components/rio-assist/`: composição do widget e controllers de apresentação.
+- `src/shared/`: utilitários reaproveitáveis.
+
+O detalhe arquitetural atualizado está em [DOCUMENTACAO_TECNICA.md](./DOCUMENTACAO_TECNICA.md).
+
+## Fluxos suportados
+
+- envio e recebimento de mensagens via WebSocket
+- histórico de conversas
+- rename e delete de conversa
+- fluxo guiado do consultor
+- anexos locais
+- gravação de voz com `MediaRecorder`
+
+## Publicação
+
+Antes de publicar no npm, rode:
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm pack --dry-run
+```
+
+## Observações
+
+- O token é passado ao backend principal via query string do WebSocket.
+- O widget não persiste histórico localmente; o carregamento vem do backend.
+- O HTML renderizado no chat passa por sanitização antes de ir para o DOM.

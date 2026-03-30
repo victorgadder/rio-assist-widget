@@ -1,16 +1,29 @@
 import {
   RioWebsocketClient,
-  type RioIncomingMessage,
 } from './rioWebsocket';
+import type {
+  RealtimeChatGateway,
+  RealtimeIncomingMessage,
+} from '../application/ports/realtime-chat-gateway';
+
+type RealtimeChatGatewayFactory = (
+  token: string,
+  options?: { websocketUrl?: string },
+) => RealtimeChatGateway;
 
 export class RioSessionController {
-  private client: RioWebsocketClient | null = null;
+  private client: RealtimeChatGateway | null = null;
   private unsubscribe: (() => void) | null = null;
+
+  constructor(
+    private readonly createClient: RealtimeChatGatewayFactory = (token, options) =>
+      new RioWebsocketClient(token, options),
+  ) {}
 
   ensureConnection(input: {
     token: string;
     websocketUrl: string;
-    onMessage: (message: RioIncomingMessage) => void;
+    onMessage: (message: RealtimeIncomingMessage) => void;
   }) {
     const token = input.token.trim();
     if (!token) {
@@ -22,7 +35,7 @@ export class RioSessionController {
     const websocketUrl = input.websocketUrl.trim();
     if (!this.client || !this.client.matchesConnection(token, websocketUrl)) {
       this.teardown();
-      this.client = new RioWebsocketClient(token, { websocketUrl });
+      this.client = this.createClient(token, { websocketUrl });
       this.unsubscribe = this.client.onMessage(input.onMessage);
     }
 

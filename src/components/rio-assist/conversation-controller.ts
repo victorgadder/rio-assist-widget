@@ -31,7 +31,10 @@ import type {
   ConversationItem,
   ConversationRenameTarget,
 } from '../../domain/conversation';
-import type { RioIncomingMessage, RioWebsocketClient } from '../../services/rioWebsocket';
+import type {
+  RealtimeChatGateway,
+  RealtimeIncomingMessage,
+} from '../../application/ports/realtime-chat-gateway';
 
 export type ConversationHost = {
   showConversations: boolean;
@@ -51,7 +54,7 @@ export type ConversationHost = {
   isLoading: boolean;
   repairConversationId: (rawId: string) => string;
   requestConversationHistory: (conversationId?: string) => Promise<void>;
-  ensureRioClient: () => RioWebsocketClient;
+  ensureRioClient: () => RealtimeChatGateway;
   applyConversationRename: (id: string, newTitle: string) => void;
   applyConversationDeletion: (id: string) => void;
   loadingGuard: { clear: () => void };
@@ -298,7 +301,7 @@ async function syncConversationDeleteBackend(host: ConversationHost, conversatio
 
 export function handleConversationSystemAction(
   host: ConversationHost,
-  message: RioIncomingMessage,
+  message: RealtimeIncomingMessage,
 ) {
   const parsed = parseConversationSystemAction(message, (rawId) =>
     host.repairConversationId(rawId),
@@ -342,7 +345,7 @@ export function handleConversationSystemAction(
 
 export function handleConversationActionError(
   host: ConversationHost,
-  message: RioIncomingMessage,
+  message: RealtimeIncomingMessage,
 ) {
   const errorText = resolveConversationActionErrorText(message);
   if (!errorText) {

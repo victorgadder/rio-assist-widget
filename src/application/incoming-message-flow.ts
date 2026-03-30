@@ -5,13 +5,13 @@ import {
 import { createConversationHistoryState } from './conversation-state-flow';
 import { applyConsultantEffectsAfterAssistantMessage, type ConsultantFlowState } from './consultant-flow';
 import { extractConversationIdFromPayload } from './history-flow';
+import type { RealtimeIncomingMessage } from './ports/realtime-chat-gateway';
 import type { ChatMessage, PendingResponseState } from '../domain/chat';
 import type { ConsultantAgentOption } from '../domain/consultant';
 import type { ConversationItem } from '../domain/conversation';
-import type { RioIncomingMessage } from '../services/rioWebsocket';
 
 export function buildIncomingAssistantState(input: {
-  message: RioIncomingMessage;
+  message: RealtimeIncomingMessage;
   conversations: ConversationItem[];
   pendingResponseTo: PendingResponseState | null;
   consultantState: ConsultantFlowState;

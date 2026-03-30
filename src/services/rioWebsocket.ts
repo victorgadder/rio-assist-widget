@@ -1,17 +1,16 @@
+import type {
+  RealtimeChatGateway,
+  RealtimeIncomingMessage,
+} from '../application/ports/realtime-chat-gateway';
 import { logger } from '../utils/logger';
 import { parseIncomingMessage } from './rioMessageParser';
 
 const DEFAULT_WEBSOCKET_URL = 'wss://ws.volkswagen.latam-sandbox.rio.cloud';
 const HEARTBEAT_INTERVAL_MS = 5 * 60_000; // keep-alive before the 10min idle timeout
 
-export type RioIncomingMessage = {
-  text: string;
-  raw: string;
-  data: unknown;
-  action?: string;
-};
+export type RioIncomingMessage = RealtimeIncomingMessage;
 
-export class RioWebsocketClient {
+export class RioWebsocketClient implements RealtimeChatGateway {
   readonly token: string;
   readonly websocketUrl: string;
 

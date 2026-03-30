@@ -4,11 +4,13 @@ import { renderRioAssist } from './rio-assist.template';
 import * as conversationController from './conversation-controller';
 import * as consultantController from './consultant-controller';
 import * as mediaController from './media-controller';
-import {
-  RioWebsocketClient,
-  type RioIncomingMessage,
-} from '../../services/rioWebsocket';
+import type {
+  RealtimeChatGateway,
+  RealtimeIncomingMessage,
+} from '../../application/ports/realtime-chat-gateway';
+import type { ConsultantOptionsGateway } from '../../application/ports/consultant-options-gateway';
 import { RioSessionController } from '../../services/rioSession';
+import { HttpConsultantOptionsGateway } from '../../services/consultantOptionsGateway';
 import { VoiceCaptureController } from '../../services/voiceCapture';
 import {
   DEFAULT_LOADING_LABEL,
@@ -19,22 +21,14 @@ import {
   CONSULTANT_AGENT_INTRO,
   type ConsultantAgentOption,
   type ConsultantQuestion,
-  loadConsultantAgentOptions,
 } from '../../consultant-agent/consultant-agent';
 import {
-  addFilesToSelection,
-  buildVoiceAttachment,
   MAX_ATTACHMENT_COUNT,
-  removeAttachmentById,
   ATTACHMENT_KIND_MAP,
 } from '../../application/attachment-flow';
 import {
-  buildWebsocketExtraPayload,
-  createAssistantResponseMessage,
   createChatMessageFactory,
   type OutgoingMessageOptions,
-  prepareOutgoingMessage,
-  syncConversationFromIncomingMessage,
 } from '../../application/chat-flow';
 import {
   buildSendMessageCleanup,
@@ -48,38 +42,8 @@ import {
   hideMessageForRefresh,
   toggleMessageReaction,
 } from '../../application/message-action-flow';
-import {
-  applyVoiceAttachmentResult,
-  closeVoiceDialog,
-  closeVoiceDialogAndResume,
-  confirmVoiceRemovalState,
-  createVoiceRecordingDiscardedState,
-  createVoiceRecordingFinishedState,
-  createVoiceRecordingPausedState,
-  createVoiceRecordingResumedState,
-  createVoiceRecordingStartedState,
-  finalizeAttachmentRemovalState,
-  openVoiceRemovalDialog,
-  resetVoiceCaptureDraftState,
-} from '../../application/media-ui-flow';
-import {
-  applyOutgoingAttachmentCleanup,
-  applyPreparedOutgoingMessageError,
-  applyPreparedOutgoingMessageState,
-  createSendEventDetail,
-} from '../../application/outgoing-message-ui-flow';
 import { buildIncomingAssistantState } from '../../application/incoming-message-flow';
 import {
-  applyConversationActionErrorState,
-  applyConversationSystemActionState,
-  createConversationActionEventDetail,
-  createConversationActionEventName,
-  createConversationActionFailureMessage,
-  createConversationActionSuccessState,
-} from '../../application/conversation-backend-flow';
-import {
-  parseConversationSystemAction,
-  resolveConversationActionErrorText,
   shouldIgnoreAssistantPayload,
 } from '../../application/conversation-action-flow';
 import {
@@ -89,16 +53,6 @@ import {
   type ConversationScrollbarDragMetrics,
   updateConversationScrollbarDrag,
 } from '../../application/conversation-scrollbar-flow';
-import {
-  createConversationActionTarget,
-  selectConversationMenuState,
-  shouldCloseConversationMenu,
-  updateRenameDraft,
-} from '../../application/conversation-ui-flow';
-import {
-  buildAttachmentRemoval,
-  prepareFileSelection,
-} from '../../application/file-selection-flow';
 import {
   finishFloatingButtonDrag as finishFloatingButtonDragState,
   startFloatingButtonDrag,
@@ -125,19 +79,10 @@ import {
   applyConversationRenameState,
   createConversationHistoryState,
   createMessageHistoryState,
-  createPendingDeleteAction,
-  createPendingRenameAction,
-  createRetryConversationAction,
   restoreConversationSnapshotState,
-  selectConversationState,
 } from '../../application/conversation-state-flow';
 import {
-  applyConsultantEffectsAfterAssistantMessage,
   createInitialConsultantFlowState,
-  prepareConsultantQuestionSend,
-  reopenConsultantPrompt,
-  selectConsultantSubject,
-  startConsultantFlow,
   suppressConsultantPrompts,
   type ConsultantFlowState,
 } from '../../application/consultant-flow';
@@ -447,8 +392,10 @@ export class RioAssistWidget extends LitElement {
 
   private conversationScrollbarRaf: number | null = null;
 
-  private rioClient: RioWebsocketClient | null = null;
+  private rioClient: RealtimeChatGateway | null = null;
   private readonly rioSession = new RioSessionController();
+  private readonly consultantOptionsGateway: ConsultantOptionsGateway =
+    new HttpConsultantOptionsGateway();
 
   copiedMessageId: string | null = null;
 
@@ -625,7 +572,8 @@ export class RioAssistWidget extends LitElement {
 
   private async bootstrapConsultantAgent() {
     try {
-      this.consultantAgentOptions = await loadConsultantAgentOptions(this.consultantApiBaseUrl);
+      this.consultantAgentOptions =
+        await this.consultantOptionsGateway.loadOptions(this.consultantApiBaseUrl);
     } catch (error) {
       console.error(
         '[RioAssist][consultant] erro ao carregar opções do agente consultor',
@@ -970,14 +918,14 @@ export class RioAssistWidget extends LitElement {
     await conversationController.retryConversationAction(this.getConversationControllerHost());
   }
 
-  private handleConversationSystemAction(message: RioIncomingMessage) {
+  private handleConversationSystemAction(message: RealtimeIncomingMessage) {
     return conversationController.handleConversationSystemAction(
       this.getConversationControllerHost(),
       message,
     );
   }
 
-  private handleConversationActionError(message: RioIncomingMessage) {
+  private handleConversationActionError(message: RealtimeIncomingMessage) {
     return conversationController.handleConversationActionError(
       this.getConversationControllerHost(),
       message,
@@ -1558,7 +1506,7 @@ export class RioAssistWidget extends LitElement {
     return this.rioClient;
   }
 
-  private async handleIncomingMessage(message: RioIncomingMessage) {
+  private async handleIncomingMessage(message: RealtimeIncomingMessage) {
     if (this.isHistoryPayload(message)) {
       this.logHistoryPayload(message);
       this.handleHistoryPayload(message.data);
@@ -1689,11 +1637,11 @@ export class RioAssistWidget extends LitElement {
     }
   }
 
-  private isHistoryPayload(message: RioIncomingMessage) {
+  private isHistoryPayload(message: RealtimeIncomingMessage) {
     return isHistoryPayloadMessage(message);
   }
 
-  private logHistoryPayload(message: RioIncomingMessage) {
+  private logHistoryPayload(message: RealtimeIncomingMessage) {
     const label = '[RioAssist][history] payload recebido do websocket';
     if (message.data !== null && message.data !== undefined) {
       console.info(label, message.data);

@@ -1,4 +1,4 @@
-import type { RioIncomingMessage } from '../services/rioWebsocket';
+import type { RealtimeIncomingMessage } from './ports/realtime-chat-gateway';
 
 export type ParsedConversationSystemAction =
   | { kind: 'rename'; conversationId: string; newTitle: string }
@@ -7,7 +7,7 @@ export type ParsedConversationSystemAction =
   | null;
 
 export function parseConversationSystemAction(
-  message: RioIncomingMessage,
+  message: RealtimeIncomingMessage,
   repairConversationId: (rawId: string) => string,
 ): ParsedConversationSystemAction {
   const action = (message.action ?? '').toLowerCase();
@@ -41,7 +41,7 @@ export function parseConversationSystemAction(
   return null;
 }
 
-export function resolveConversationActionErrorText(message: RioIncomingMessage): string | null {
+export function resolveConversationActionErrorText(message: RealtimeIncomingMessage): string | null {
   const action = (message.action ?? '').toLowerCase();
   if (action !== 'error') {
     return null;
